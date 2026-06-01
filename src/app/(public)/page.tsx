@@ -182,7 +182,7 @@ export default function HomePage() {
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary-700/50 border border-primary-600/30 text-xs font-bold text-accent-light tracking-wide">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Next-Generation Hog Farm & Catering</span>
+                <span>Piggery Farm and Catering Services</span>
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-heading tracking-tight leading-tight">
                 Premium Grade Livestock, <br />
@@ -205,36 +205,8 @@ export default function HomePage() {
 
             {/* Graphic Panel */}
             <div className="lg:col-span-5 relative">
-              <div className="w-full aspect-square rounded-3xl bg-linear-to-tr from-primary-700/60 to-primary-600/20 border border-primary-600/30 p-8 flex flex-col justify-between overflow-hidden shadow-2xl relative">
-                {/* Floating Card */}
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 self-start shadow-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-accent-light/20 p-2 rounded-xl text-accent-light">
-                      <TrendingUp className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase font-bold tracking-wider text-slate-300">Feed Conversion</div>
-                      <div className="text-sm font-bold text-white">FCR 2.4 - Highly Efficient</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-center items-center py-6">
-                  <PiggyBank className="w-36 h-36 text-accent-light/80 filter drop-shadow-[0_10px_15px_rgba(82,183,136,0.3)] animate-pulse" />
-                </div>
-
-                {/* Floating Card 2 */}
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 self-end shadow-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
-                      <ShieldCheck className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase font-bold tracking-wider text-slate-300">Biosecurity Level</div>
-                      <div className="text-sm font-bold text-white">Class A Standard</div>
-                    </div>
-                  </div>
-                </div>
+              <div className="w-full aspect-square rounded-3xl bg-linear-to-tr from-primary-700/60 to-primary-600/20 border border-primary-600/30 p-8 flex items-center justify-center overflow-hidden shadow-2xl relative">
+                <PiggyBank className="w-40 h-40 text-accent-light/80 filter drop-shadow-[0_10px_15px_rgba(82,183,136,0.3)] animate-pulse" />
               </div>
             </div>
           </div>
