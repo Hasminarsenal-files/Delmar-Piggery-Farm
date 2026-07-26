@@ -49,7 +49,7 @@ export default function CustomerPaluwaganMembershipPage() {
   // Form values
   const [fullName, setFullName] = useState(userName);
   const [birthdate, setBirthdate] = useState("");
-  const [age, setAge] = useState<number>(25);
+  const [age, setAge] = useState<number | "">("");
   const [civilStatus, setCivilStatus] = useState("Single");
   const [mobileNumber, setMobileNumber] = useState(userPhone);
   const [emailAddress, setEmailAddress] = useState(userEmail);
@@ -59,6 +59,22 @@ export default function CustomerPaluwaganMembershipPage() {
   const [barangay, setBarangay] = useState("Tickwas");
   const [municipalityCity, setMunicipalityCity] = useState("Dumalinao");
   const [province, setProvince] = useState("Zamboanga del Sur");
+
+  const handleBirthdateChange = (dateVal: string) => {
+    setBirthdate(dateVal);
+    if (dateVal) {
+      const birth = new Date(dateVal);
+      const today = new Date();
+      let calculatedAge = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        calculatedAge--;
+      }
+      if (!isNaN(calculatedAge) && calculatedAge >= 0) {
+        setAge(calculatedAge);
+      }
+    }
+  };
 
   // Verification & Emergency Contact
   const [idType, setIdType] = useState("National ID");
@@ -92,7 +108,7 @@ export default function CustomerPaluwaganMembershipPage() {
       customerEmail: userEmail,
       fullName,
       birthdate,
-      age,
+      age: Number(age) || 18,
       civilStatus,
       mobileNumber,
       emailAddress,
@@ -257,7 +273,7 @@ export default function CustomerPaluwaganMembershipPage() {
                         type="date"
                         required
                         value={birthdate}
-                        onChange={(e) => setBirthdate(e.target.value)}
+                        onChange={(e) => handleBirthdateChange(e.target.value)}
                         className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500/20"
                       />
                     </div>
@@ -268,8 +284,9 @@ export default function CustomerPaluwaganMembershipPage() {
                         min={18}
                         max={100}
                         required
+                        placeholder="Auto-calculated"
                         value={age}
-                        onChange={(e) => setAge(Number(e.target.value) || 18)}
+                        onChange={(e) => setAge(e.target.value ? Number(e.target.value) : "")}
                         className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500/20"
                       />
                     </div>
