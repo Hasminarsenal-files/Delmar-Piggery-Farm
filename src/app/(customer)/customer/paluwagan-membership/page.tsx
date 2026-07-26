@@ -218,9 +218,9 @@ export default function CustomerPaluwaganMembershipPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
           >
-            <Card className="bg-white border border-slate-200/60 rounded-3xl shadow-xl max-w-3xl mx-auto flex flex-col max-h-[85vh] overflow-hidden">
+            <Card className="bg-white border border-slate-200/60 rounded-3xl shadow-xl max-w-3xl mx-auto flex flex-col max-h-[72vh] sm:max-h-[75vh] overflow-hidden">
               {/* FIXED TOP HEADER - Stays locked at top of panel */}
-              <div className="px-6 sm:px-8 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0 z-10 shadow-2xs">
+              <div className="px-6 sm:px-8 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0 z-10 shadow-xs">
                 <h3 className="text-sm sm:text-base font-extrabold text-[#1B4332] uppercase tracking-wider flex items-center gap-2">
                   <FileText className="w-5 h-5 text-emerald-600" />
                   Paluwagan Membership Application Form
@@ -230,8 +230,11 @@ export default function CustomerPaluwaganMembershipPage() {
                 </Button>
               </div>
 
-              {/* SCROLLABLE FORM BODY */}
-              <div className="p-6 sm:p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-600/30 scrollbar-track-slate-100 flex-1">
+              {/* SCROLLABLE FORM BODY - Always scrollable */}
+              <div 
+                className="p-6 sm:p-8 overflow-y-scroll flex-1 max-h-[58vh] sm:max-h-[64vh]"
+                style={{ scrollbarWidth: "thin", scrollbarColor: "#059669 #f1f5f9" }}
+              >
                 <form onSubmit={handleSubmit} className="space-y-6 text-xs text-slate-700">
 
                 {/* Section A: Personal Information */}
