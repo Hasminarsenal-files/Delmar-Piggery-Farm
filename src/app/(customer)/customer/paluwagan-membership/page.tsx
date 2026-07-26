@@ -218,9 +218,9 @@ export default function CustomerPaluwaganMembershipPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
           >
-            <Card className="p-6 bg-white border border-slate-200/60 rounded-3xl shadow-sm max-w-3xl mx-auto">
+            <Card className="p-6 bg-white border border-slate-200/60 rounded-3xl shadow-xl max-w-3xl mx-auto max-h-[82vh] overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-600/30 scrollbar-track-slate-100 relative">
               <form onSubmit={handleSubmit} className="space-y-6 text-xs text-slate-700">
-                <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
+                <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-20 pb-3.5 pt-1 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="text-sm font-extrabold text-[#1B4332] uppercase tracking-wider flex items-center gap-1.5">
                     <FileText className="w-4 h-4 text-emerald-600" />
                     Paluwagan Membership Application Form
