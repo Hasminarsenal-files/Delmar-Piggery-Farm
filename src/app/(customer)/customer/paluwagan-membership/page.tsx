@@ -453,24 +453,14 @@ export default function CustomerPaluwaganMembershipPage() {
                 <div className="space-y-4">
                   <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[10px] border-l-2 border-emerald-500 pl-2">Employment Information</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1">
+                    <div className="space-y-1 sm:col-span-2">
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Occupation</label>
                       <input
                         type="text"
                         required
                         value={occupation}
                         onChange={(e) => setOccupation(e.target.value)}
-                        placeholder="e.g. Sales Manager"
-                        className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500/20"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase">Employer or Business Name</label>
-                      <input
-                        type="text"
-                        value={employerName}
-                        onChange={(e) => setEmployerName(e.target.value)}
-                        placeholder="e.g. Savorlicious Stores"
+                        placeholder="e.g. Sales Manager, Business Owner, Farmer"
                         className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500/20"
                       />
                     </div>
