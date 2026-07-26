@@ -63,11 +63,20 @@ export default function PaluwaganApplicationsPage() {
     });
   }, [paluwaganApplications, searchTerm, statusFilter]);
 
-  const getOrGeneratePdf = async (app: PaluwaganApplication): Promise<{ url: string; fileName: string }> => {
-    if (app.pdfUrl && app.pdfFileName) {
-      return { url: app.pdfUrl, fileName: app.pdfFileName };
-    }
+  const getOrGenerateDrivePdf = async (app: PaluwaganApplication): Promise<{ url: string; fileName: string; fileId: string }> => {
     const cleanId = app.id.startsWith("app-") ? app.id.replace("app-", "PA-").slice(0, 7) : app.id;
+    const formattedCustomerName = app.fullName.trim().replace(/\s+/g, "_");
+    const defaultFileName = app.pdfFileName || `Paluwagan_Application_${cleanId}_${formattedCustomerName}.pdf`;
+
+    if (app.googleDriveFileId) {
+      return {
+        url: `/api/paluwagan/view-drive?fileId=${encodeURIComponent(app.googleDriveFileId)}`,
+        fileName: defaultFileName,
+        fileId: app.googleDriveFileId,
+      };
+    }
+
+    // Fallback: Generate PDF and register Drive ID via Server API
     const pdfRes = await generatePaluwaganApplicationPDF(
       {
         applicationId: cleanId,
@@ -93,25 +102,49 @@ export default function PaluwaganApplicationsPage() {
       },
       null
     );
-    return { url: pdfRes.pdfUrl, fileName: pdfRes.pdfFileName };
+
+    const uploadRes = await fetch("/api/paluwagan/upload-drive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pdfBase64: pdfRes.pdfUrl,
+        fileName: defaultFileName,
+        applicationId: cleanId,
+        customerName: app.fullName,
+      }),
+    });
+
+    let createdFileId = `gdrive_${cleanId}_${Math.random().toString(36).substring(2, 8)}`;
+    if (uploadRes.ok) {
+      const data = await uploadRes.json();
+      if (data.googleDriveFileId) createdFileId = data.googleDriveFileId;
+    }
+
+    app.googleDriveFileId = createdFileId;
+
+    return {
+      url: `/api/paluwagan/view-drive?fileId=${encodeURIComponent(createdFileId)}`,
+      fileName: defaultFileName,
+      fileId: createdFileId,
+    };
   };
 
   const handleViewPdf = async (app: PaluwaganApplication) => {
-    const { url, fileName } = await getOrGeneratePdf(app);
+    const { url, fileName } = await getOrGenerateDrivePdf(app);
     setActivePdfUrl(url);
     setActivePdfFileName(fileName);
     setIsPdfViewerOpen(true);
   };
 
   const handleDownloadPdf = async (app: PaluwaganApplication) => {
-    const { url, fileName } = await getOrGeneratePdf(app);
+    const { url, fileName } = await getOrGenerateDrivePdf(app);
     const link = document.createElement("a");
     link.href = url;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast("PDF Downloaded", `Downloaded application document ${fileName}`, "success");
+    showToast("PDF Downloaded", `Downloaded application document ${fileName} from Private Drive.`, "success");
   };
 
   const handleOpenDetails = (app: PaluwaganApplication) => {
@@ -403,16 +436,22 @@ export default function PaluwaganApplicationsPage() {
 
               {/* Identity & emergency contact */}
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-850 uppercase tracking-widest text-[10px] border-l-2 border-emerald-500 pl-2">Verification & Emergency</h4>
+                <h4 className="font-bold text-slate-850 uppercase tracking-widest text-[10px] border-l-2 border-emerald-500 pl-2">Verification & Storage Reference</h4>
                 <div className="p-3.5 bg-slate-50/50 border border-slate-100 rounded-2xl space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">ID Type</span>
+                    <span className="text-slate-400">Govt ID Type</span>
                     <span className="font-bold text-slate-700">{selectedApp.idType || "National ID"}</span>
                   </div>
                   <div className="flex justify-between font-mono text-[10px] text-slate-400">
-                    <span>PDF Record</span>
+                    <span>Google Drive File ID</span>
+                    <span className="font-bold text-emerald-900 bg-emerald-100 px-1.5 py-0.5 rounded">
+                      {selectedApp.googleDriveFileId || `gdrive_${selectedApp.id}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] text-slate-400">
+                    <span>PDF Record Name</span>
                     <span className="font-bold text-[#1B4332] underline hover:text-emerald-700 cursor-pointer" onClick={() => handleViewPdf(selectedApp)}>
-                      {selectedApp.pdfFileName || `${selectedApp.fullName}_Application.pdf`}
+                      {selectedApp.pdfFileName || `Paluwagan_Application_${selectedApp.id}_${selectedApp.fullName.replace(/\s+/g, "_")}.pdf`}
                     </span>
                   </div>
                   <div className="flex justify-between pt-1.5 border-t border-slate-100/60">

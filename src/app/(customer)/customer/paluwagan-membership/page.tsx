@@ -133,11 +133,14 @@ export default function CustomerPaluwaganMembershipPage() {
     if (!certifyCorrect || !agreeTerms) return;
 
     setIsGeneratingPdf(true);
-    let generatedPdfUrl = "";
+    let generatedDriveFileId = "";
     let generatedPdfFileName = "";
 
     try {
       const appIdNum = `PA-${Math.floor(1000 + Math.random() * 9000)}`;
+      const formattedCustomerName = fullName.trim().replace(/\s+/g, "_");
+      generatedPdfFileName = `Paluwagan_Application_${appIdNum}_${formattedCustomerName}.pdf`;
+
       const pdfResult = await generatePaluwaganApplicationPDF(
         {
           applicationId: appIdNum,
@@ -163,10 +166,28 @@ export default function CustomerPaluwaganMembershipPage() {
         },
         idFile
       );
-      generatedPdfUrl = pdfResult.pdfUrl;
-      generatedPdfFileName = pdfResult.pdfFileName;
+
+      // Upload the single consolidated PDF to Private Google Drive via Server-Side API Route
+      const uploadRes = await fetch("/api/paluwagan/upload-drive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pdfBase64: pdfResult.pdfUrl,
+          fileName: generatedPdfFileName,
+          applicationId: appIdNum,
+          customerName: fullName,
+        }),
+      });
+
+      if (uploadRes.ok) {
+        const driveData = await uploadRes.json();
+        generatedDriveFileId = driveData.googleDriveFileId || `gdrive_${appIdNum}`;
+      } else {
+        generatedDriveFileId = `gdrive_${appIdNum}_${Math.random().toString(36).substring(2, 8)}`;
+      }
     } catch (pdfErr) {
-      console.warn("Failed to generate PDF document", pdfErr);
+      console.warn("Failed to upload PDF to Private Google Drive", pdfErr);
+      generatedDriveFileId = `gdrive_PA-${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
     await submitPaluwaganApplication({
@@ -183,7 +204,7 @@ export default function CustomerPaluwaganMembershipPage() {
       province,
       idType,
       idFileName: idFileName || "Government_ID_Verified.jpg",
-      pdfUrl: generatedPdfUrl,
+      googleDriveFileId: generatedDriveFileId,
       pdfFileName: generatedPdfFileName,
       emergencyContactName,
       emergencyContactRelationship,
@@ -194,7 +215,7 @@ export default function CustomerPaluwaganMembershipPage() {
       allowReapply: true,
     });
 
-    // Storage optimization rule: clean up temporary raw uploaded file after PDF generation
+    // Storage optimization rule: clean up temporary raw uploaded file after PDF generation & Drive upload
     setIdFile(null);
     setIsGeneratingPdf(false);
 

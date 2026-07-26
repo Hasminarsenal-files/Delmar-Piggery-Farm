@@ -140,7 +140,7 @@ export interface PaluwaganApplication {
   province: string;
   idType: string;
   idFileName: string;
-  pdfUrl?: string;
+  googleDriveFileId?: string; // Private Google Drive File ID reference (NO PDF binary stored in database)
   pdfFileName?: string;
   emergencyContactName: string;
   emergencyContactRelationship: string;
