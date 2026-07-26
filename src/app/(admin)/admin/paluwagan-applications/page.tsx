@@ -1,29 +1,23 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { useRole, PaluwaganApplication, PaluwaganBatch } from "@/context/RoleContext";
+import { useRole, PaluwaganApplication } from "@/context/RoleContext";
+import { generatePaluwaganApplicationPDF } from "@/utils/pdfGenerator";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Modal } from "@/components/ui/Modal";
 import {
-  ClipboardCheck,
   Search,
   CheckCircle2,
   AlertCircle,
   FileText,
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Calendar,
-  Briefcase,
-  Layers,
-  Heart,
-  TrendingUp,
-  XCircle
+  Eye,
+  Download,
+  FileCheck,
+  Info,
+  XCircle,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 export default function PaluwaganApplicationsPage() {
   const {
@@ -31,6 +25,7 @@ export default function PaluwaganApplicationsPage() {
     paluwaganBatches,
     approvePaluwaganApplication,
     rejectPaluwaganApplication,
+    updatePaluwaganApplicationStatus,
     showToast
   } = useRole();
 
@@ -44,10 +39,16 @@ export default function PaluwaganApplicationsPage() {
   const [isApproveOpen, setIsApproveOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
 
+  // PDF Viewer Modal State
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
+  const [activePdfUrl, setActivePdfUrl] = useState<string>("");
+  const [activePdfFileName, setActivePdfFileName] = useState<string>("");
+
   // Form states for approval/rejection
   const [selectedBatchId, setSelectedBatchId] = useState("");
   const [rejectRemarks, setRejectRemarks] = useState("");
   const [allowReapply, setAllowReapply] = useState(true);
+  const [reqInfoRemarks, setReqInfoRemarks] = useState("");
 
   // Filtered applications list
   const filteredApps = useMemo(() => {
@@ -55,11 +56,63 @@ export default function PaluwaganApplicationsPage() {
       const matchesSearch =
         app.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.mobileNumber.includes(searchTerm);
+        app.mobileNumber.includes(searchTerm) ||
+        app.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "All" || app.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [paluwaganApplications, searchTerm, statusFilter]);
+
+  const getOrGeneratePdf = async (app: PaluwaganApplication): Promise<{ url: string; fileName: string }> => {
+    if (app.pdfUrl && app.pdfFileName) {
+      return { url: app.pdfUrl, fileName: app.pdfFileName };
+    }
+    const cleanId = app.id.startsWith("app-") ? app.id.replace("app-", "PA-").slice(0, 7) : app.id;
+    const pdfRes = await generatePaluwaganApplicationPDF(
+      {
+        applicationId: cleanId,
+        dateSubmitted: app.dateSubmitted,
+        status: app.status,
+        fullName: app.fullName,
+        birthdate: app.birthdate,
+        age: app.age,
+        civilStatus: app.civilStatus,
+        mobileNumber: app.mobileNumber,
+        emailAddress: app.customerEmail,
+        completeAddress: app.completeAddress,
+        barangay: app.barangay,
+        municipalityCity: app.municipalityCity,
+        province: app.province,
+        emergencyContactName: app.emergencyContactName,
+        emergencyContactRelationship: app.emergencyContactRelationship,
+        emergencyContactNumber: app.emergencyContactNumber,
+        occupation: app.occupation,
+        employerName: app.employerName || "Self-Employed",
+        monthlyIncomeRange: app.monthlyIncomeRange,
+        idType: app.idType,
+      },
+      null
+    );
+    return { url: pdfRes.pdfUrl, fileName: pdfRes.pdfFileName };
+  };
+
+  const handleViewPdf = async (app: PaluwaganApplication) => {
+    const { url, fileName } = await getOrGeneratePdf(app);
+    setActivePdfUrl(url);
+    setActivePdfFileName(fileName);
+    setIsPdfViewerOpen(true);
+  };
+
+  const handleDownloadPdf = async (app: PaluwaganApplication) => {
+    const { url, fileName } = await getOrGeneratePdf(app);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("PDF Downloaded", `Downloaded application document ${fileName}`, "success");
+  };
 
   const handleOpenDetails = (app: PaluwaganApplication) => {
     setSelectedApp(app);
@@ -105,6 +158,17 @@ export default function PaluwaganApplicationsPage() {
     }
   };
 
+  const handleRequestInfo = async () => {
+    if (!selectedApp) return;
+    const promptRemarks = prompt("Enter notes for the customer regarding additional information needed:", "Please provide an updated copy of your valid Government ID.");
+    if (promptRemarks !== null) {
+      await updatePaluwaganApplicationStatus(selectedApp.id, "Requires Additional Information", promptRemarks);
+      showToast("Status Updated", `Requested additional info for ${selectedApp.fullName}.`, "info");
+      setIsDetailsOpen(false);
+      setSelectedApp(null);
+    }
+  };
+
   return (
     <div className="space-y-6 font-sans">
       <div className="space-y-1">
@@ -144,49 +208,61 @@ export default function PaluwaganApplicationsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="text-[10.5px]">Application ID</TableHead>
               <TableHead className="text-[10.5px]">Applicant Name</TableHead>
               <TableHead className="text-[10.5px]">Contact Number</TableHead>
-              <TableHead className="text-[10.5px]">Email Address</TableHead>
+              <TableHead className="text-[10.5px]">Govt ID Type</TableHead>
               <TableHead className="text-[10.5px]">Date Submitted</TableHead>
               <TableHead className="text-[10.5px]">Status</TableHead>
+              <TableHead className="text-[10.5px]">PDF Available</TableHead>
               <TableHead className="text-[10.5px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredApps.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-xs text-slate-400 font-medium">
+                <TableCell colSpan={8} className="text-center py-8 text-xs text-slate-400 font-medium">
                   No membership applications matches the filters.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredApps.map((app) => (
-                <TableRow key={app.id}>
-                  <TableCell className="font-extrabold text-slate-800 text-xs">{app.fullName}</TableCell>
-                  <TableCell className="text-xs font-semibold text-slate-600 font-mono">{app.mobileNumber}</TableCell>
-                  <TableCell className="text-xs font-semibold text-slate-600">{app.customerEmail}</TableCell>
-                  <TableCell className="text-xs font-semibold text-slate-500 font-mono">{app.dateSubmitted}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-extrabold uppercase border ${
-                      app.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                      app.status === "Pending" ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse" :
-                      "bg-rose-50 text-rose-700 border-rose-200"
-                    }`}>
-                      {app.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleOpenDetails(app)}
-                      className="cursor-pointer font-bold"
-                    >
-                      View Details
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              filteredApps.map((app) => {
+                const displayAppId = app.id.startsWith("app-") ? `PA-${app.id.slice(4, 8).toUpperCase()}` : app.id;
+                return (
+                  <TableRow key={app.id}>
+                    <TableCell className="font-mono text-xs font-bold text-emerald-800">{displayAppId}</TableCell>
+                    <TableCell className="font-extrabold text-slate-800 text-xs">{app.fullName}</TableCell>
+                    <TableCell className="text-xs font-semibold text-slate-600 font-mono">{app.mobileNumber}</TableCell>
+                    <TableCell className="text-xs font-semibold text-slate-600">{app.idType || "National ID"}</TableCell>
+                    <TableCell className="text-xs font-semibold text-slate-500 font-mono">{app.dateSubmitted}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-extrabold uppercase border ${
+                        app.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                        app.status === "Pending" ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse" :
+                        app.status === "Requires Additional Information" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        "bg-rose-50 text-rose-700 border-rose-200"
+                      }`}>
+                        {app.status}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-1 text-[9.5px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md">
+                        <FileCheck className="w-3 h-3 text-emerald-600" /> PDF Ready
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleOpenDetails(app)}
+                        className="cursor-pointer font-bold"
+                      >
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -204,18 +280,57 @@ export default function PaluwaganApplicationsPage() {
             {/* Header Status Badge */}
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
               <div>
-                <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Application Status</span>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border inline-block mt-1 ${
-                  selectedApp.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                  selectedApp.status === "Pending" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                  "bg-rose-50 text-rose-700 border-rose-200"
-                }`}>
-                  {selectedApp.status}
-                </span>
+                <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Application ID & Status</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-mono text-xs font-bold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-lg">
+                    {selectedApp.id.startsWith("app-") ? `PA-${selectedApp.id.slice(4, 8).toUpperCase()}` : selectedApp.id}
+                  </span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border inline-block ${
+                    selectedApp.status === "Approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                    selectedApp.status === "Pending" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                    selectedApp.status === "Requires Additional Information" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                    "bg-rose-50 text-rose-700 border-rose-200"
+                  }`}>
+                    {selectedApp.status}
+                  </span>
+                </div>
               </div>
               <div className="text-right">
                 <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Date Submitted</span>
                 <span className="font-extrabold text-slate-800 font-mono">{selectedApp.dateSubmitted}</span>
+              </div>
+            </div>
+
+            {/* CONSOLIDATED APPLICATION PDF ACTION BAR */}
+            <div className="p-4 bg-[#1B4332] text-white rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-emerald-600/30 text-emerald-300 rounded-xl">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white">Consolidated Application Document (ONE PDF)</h4>
+                  <p className="text-[10px] text-emerald-100/80">Contains all form data & compressed Government ID inside a single document record.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleViewPdf(selectedApp)}
+                  className="font-bold bg-white/10 hover:bg-white/20 text-white border-white/20 cursor-pointer"
+                  icon={<Eye className="w-3.5 h-3.5" />}
+                >
+                  VIEW APPLICATION PDF
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleDownloadPdf(selectedApp)}
+                  className="font-bold bg-[#D4AF37] hover:bg-[#c29d2f] text-emerald-950 border-transparent cursor-pointer"
+                  icon={<Download className="w-3.5 h-3.5 text-emerald-950" />}
+                >
+                  DOWNLOAD PDF
+                </Button>
               </div>
             </div>
 
@@ -231,11 +346,11 @@ export default function PaluwaganApplicationsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Age / Civil Status</span>
-                    <span className="font-bold text-slate-700">{selectedApp.age} y/o | {selectedApp.civilStatus}</span>
+                    <span className="font-bold text-slate-700">{selectedApp.age} y/o | {selectedApp.civilStatus || "N/A"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Birthdate</span>
-                    <span className="font-bold text-slate-700 font-mono">{selectedApp.birthdate}</span>
+                    <span className="font-bold text-slate-700 font-mono">{selectedApp.birthdate || "N/A"}</span>
                   </div>
                   <div className="flex justify-between pt-1.5 border-t border-slate-100/60">
                     <span className="text-slate-400">Mobile</span>
@@ -254,19 +369,19 @@ export default function PaluwaganApplicationsPage() {
                 <div className="p-3.5 bg-slate-50/50 border border-slate-100 rounded-2xl space-y-2">
                   <div className="flex justify-between">
                     <span className="text-slate-400 shrink-0">Street/House No</span>
-                    <span className="font-bold text-slate-700 text-right">{selectedApp.completeAddress}</span>
+                    <span className="font-bold text-slate-700 text-right">{selectedApp.completeAddress || "N/A"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Barangay</span>
-                    <span className="font-bold text-slate-700">{selectedApp.barangay}</span>
+                    <span className="font-bold text-slate-700">{selectedApp.barangay || "N/A"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Municipality</span>
-                    <span className="font-bold text-slate-700">{selectedApp.municipalityCity}</span>
+                    <span className="font-bold text-slate-700">{selectedApp.municipalityCity || "N/A"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Province</span>
-                    <span className="font-bold text-slate-700">{selectedApp.province}</span>
+                    <span className="font-bold text-slate-700">{selectedApp.province || "N/A"}</span>
                   </div>
                 </div>
               </div>
@@ -277,15 +392,11 @@ export default function PaluwaganApplicationsPage() {
                 <div className="p-3.5 bg-slate-50/50 border border-slate-100 rounded-2xl space-y-2">
                   <div className="flex justify-between">
                     <span className="text-slate-400">Occupation</span>
-                    <span className="font-extrabold text-slate-800">{selectedApp.occupation}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Employer Name</span>
-                    <span className="font-bold text-slate-700">{selectedApp.employerName}</span>
+                    <span className="font-extrabold text-slate-800">{selectedApp.occupation || "N/A"}</span>
                   </div>
                   <div className="flex justify-between pt-1.5 border-t border-slate-100/60">
                     <span className="text-slate-400">Income Range</span>
-                    <span className="font-extrabold text-emerald-800">{selectedApp.monthlyIncomeRange}</span>
+                    <span className="font-extrabold text-emerald-800">{selectedApp.monthlyIncomeRange || "N/A"}</span>
                   </div>
                 </div>
               </div>
@@ -295,20 +406,22 @@ export default function PaluwaganApplicationsPage() {
                 <h4 className="font-bold text-slate-850 uppercase tracking-widest text-[10px] border-l-2 border-emerald-500 pl-2">Verification & Emergency</h4>
                 <div className="p-3.5 bg-slate-50/50 border border-slate-100 rounded-2xl space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">ID Uploaded</span>
-                    <span className="font-bold text-slate-700">{selectedApp.idType}</span>
+                    <span className="text-slate-400">ID Type</span>
+                    <span className="font-bold text-slate-700">{selectedApp.idType || "National ID"}</span>
                   </div>
                   <div className="flex justify-between font-mono text-[10px] text-slate-400">
-                    <span>File Name</span>
-                    <span className="font-bold text-[#1B4332] underline hover:text-emerald-700 cursor-pointer">{selectedApp.idFileName}</span>
+                    <span>PDF Record</span>
+                    <span className="font-bold text-[#1B4332] underline hover:text-emerald-700 cursor-pointer" onClick={() => handleViewPdf(selectedApp)}>
+                      {selectedApp.pdfFileName || `${selectedApp.fullName}_Application.pdf`}
+                    </span>
                   </div>
                   <div className="flex justify-between pt-1.5 border-t border-slate-100/60">
                     <span className="text-slate-400">Emergency Contact</span>
-                    <span className="font-bold text-slate-800">{selectedApp.emergencyContactName}</span>
+                    <span className="font-bold text-slate-800">{selectedApp.emergencyContactName || "N/A"}</span>
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-400">Relationship / Tel</span>
-                    <span className="font-bold text-slate-700">({selectedApp.emergencyContactRelationship}) {selectedApp.emergencyContactNumber}</span>
+                    <span className="font-bold text-slate-700">({selectedApp.emergencyContactRelationship || "N/A"}) {selectedApp.emergencyContactNumber || "N/A"}</span>
                   </div>
                 </div>
               </div>
@@ -336,19 +449,30 @@ export default function PaluwaganApplicationsPage() {
               </div>
             )}
 
-            {/* Rejection Remarks */}
-            {selectedApp.status === "Rejected" && (
-              <div className="p-4 bg-rose-50/40 border border-rose-100 rounded-2xl space-y-1">
-                <span className="text-[10px] text-rose-700 font-bold block uppercase tracking-wider">Rejection Remarks</span>
-                <p className="font-medium text-slate-600 leading-normal font-semibold">"{selectedApp.adminRemarks || "No remarks provided"}"</p>
+            {/* Admin Remarks / Info Request Notes */}
+            {selectedApp.adminRemarks && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider">Admin Remarks / Notes</span>
+                <p className="font-medium text-slate-700 leading-normal font-semibold">"{selectedApp.adminRemarks}"</p>
               </div>
             )}
 
-            {/* ACTION BUTTONS (Only show for Pending Applications) */}
-            {selectedApp.status === "Pending" && (
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3.5">
+            {/* ACTION BUTTONS */}
+            <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleRequestInfo}
+                className="font-bold cursor-pointer text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100"
+                icon={<Info className="w-3.5 h-3.5 text-blue-600" />}
+              >
+                Requires Add'l Info
+              </Button>
+              
+              <div className="flex items-center gap-2">
                 <Button
                   variant="secondary"
+                  size="sm"
                   className="font-bold cursor-pointer text-rose-600 border-rose-100 hover:bg-rose-50"
                   onClick={handleOpenReject}
                 >
@@ -356,13 +480,14 @@ export default function PaluwaganApplicationsPage() {
                 </Button>
                 <Button
                   variant="primary"
+                  size="sm"
                   className="font-bold cursor-pointer bg-emerald-600 text-white hover:bg-emerald-800"
                   onClick={handleOpenApprove}
                 >
                   Approve Application
                 </Button>
               </div>
-            )}
+            </div>
           </div>
         )}
       </Modal>
@@ -452,6 +577,49 @@ export default function PaluwaganApplicationsPage() {
             <Button variant="primary" disabled={!rejectRemarks} onClick={handleConfirmReject} className="font-bold cursor-pointer bg-rose-600 text-white hover:bg-rose-800">
               Confirm Rejection
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 4. IN-APP CONSOLIDATED PDF VIEWER MODAL */}
+      <Modal
+        isOpen={isPdfViewerOpen}
+        onClose={() => setIsPdfViewerOpen(false)}
+        title={`Application Record PDF - ${activePdfFileName}`}
+        size="xl"
+      >
+        <div className="space-y-3">
+          <div className="flex justify-between items-center bg-slate-100 p-2.5 rounded-xl text-xs">
+            <span className="font-bold text-slate-700 font-mono truncate">{activePdfFileName}</span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const link = document.createElement("a");
+                link.href = activePdfUrl;
+                link.download = activePdfFileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              className="font-bold cursor-pointer text-emerald-800 bg-white shadow-xs"
+              icon={<Download className="w-3.5 h-3.5" />}
+            >
+              Download PDF
+            </Button>
+          </div>
+          <div className="w-full h-[68vh] border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+            {activePdfUrl ? (
+              <iframe
+                src={activePdfUrl}
+                title="Paluwagan Application Document PDF"
+                className="w-full h-full border-0"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-400 font-medium text-xs">
+                Loading PDF Document...
+              </div>
+            )}
           </div>
         </div>
       </Modal>

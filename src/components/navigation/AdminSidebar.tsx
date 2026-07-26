@@ -91,9 +91,9 @@ export const AdminSidebar: React.FC = () => {
   const paluwaganLinks = [
     { name: "Applications", href: "/admin/paluwagan-applications", icon: ClipboardCheck },
     { name: "Members", href: "/admin/paluwagan-members", icon: Users },
-    { name: "Batches", href: "/admin/food-services/paluwagan", icon: Layers },
+    { name: "Batches", href: "/admin/batches", icon: Layers },
     { name: "Orders", href: "/admin/food-services/orders", icon: ClipboardList },
-    { name: "Payments", href: "/admin/paluwagan-ledger", icon: Coins },
+    { name: "Payments", href: "/admin/payments", icon: CreditCard },
     { name: "Collection Ledger", href: "/admin/paluwagan-ledger", icon: Coins },
   ];
 

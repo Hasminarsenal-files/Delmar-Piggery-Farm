@@ -140,13 +140,15 @@ export interface PaluwaganApplication {
   province: string;
   idType: string;
   idFileName: string;
+  pdfUrl?: string;
+  pdfFileName?: string;
   emergencyContactName: string;
   emergencyContactRelationship: string;
   emergencyContactNumber: string;
   occupation: string;
   employerName: string;
   monthlyIncomeRange: string;
-  status: "Pending" | "Approved" | "Rejected";
+  status: "Pending" | "Approved" | "Rejected" | "Requires Additional Information";
   dateSubmitted: string;
   dateApproved?: string;
   adminRemarks?: string;
@@ -301,6 +303,7 @@ interface RoleContextProps {
   submitPaluwaganApplication: (app: Omit<PaluwaganApplication, "id" | "status" | "dateSubmitted">) => Promise<boolean>;
   approvePaluwaganApplication: (id: string, batchId: string) => Promise<boolean>;
   rejectPaluwaganApplication: (id: string, remarks: string, allowReapply?: boolean) => Promise<boolean>;
+  updatePaluwaganApplicationStatus: (id: string, status: PaluwaganApplication["status"], remarks?: string) => Promise<boolean>;
   archivePaluwaganMembership: (memberId: string) => Promise<boolean>;
   addLedgerPayment: (entry: Omit<PaluwaganLedgerEntry, "id" | "receiptNumber" | "remainingBalanceAfter">) => Promise<boolean>;
   voidLedgerPayment: (id: string, voidedBy: string) => Promise<boolean>;
@@ -2708,6 +2711,36 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
+  const updatePaluwaganApplicationStatus = async (
+    id: string,
+    status: PaluwaganApplication["status"],
+    remarks?: string
+  ): Promise<boolean> => {
+    const updated = paluwaganApplications.map(app => {
+      if (app.id === id) {
+        simulateEmail(
+          app.customerEmail,
+          `Paluwagan Membership Application Status: ${status}`,
+          `Dear ${app.fullName}, your Paluwagan Membership application status has been updated to "${status}".${remarks ? `\n\nAdmin Remarks: ${remarks}` : ""}`,
+          "system"
+        );
+        return {
+          ...app,
+          status,
+          adminRemarks: remarks || app.adminRemarks,
+        };
+      }
+      return app;
+    });
+
+    setPaluwaganApplications(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("savorlicious_paluwagan_applications", JSON.stringify(updated));
+    }
+    await logAction("UPDATE_PALUWAGAN_APP_STATUS", `Updated status for application ID "${id}" to "${status}"`);
+    return true;
+  };
+
   const archivePaluwaganMembership = async (memberId: string): Promise<boolean> => {
     const updated = paluwaganApplications.map(app => {
       if (app.memberId === memberId) {
@@ -3199,6 +3232,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         submitPaluwaganApplication,
         approvePaluwaganApplication,
         rejectPaluwaganApplication,
+        updatePaluwaganApplicationStatus,
         archivePaluwaganMembership,
         addLedgerPayment,
         voidLedgerPayment,
