@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Lock, Mail, ShieldAlert, ArrowRight, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
 function LoginForm() {
-  const { setRole, sendPasswordReset } = useRole();
+  const { setRole, sendPasswordReset, customers, paluwaganApplications, updateProfile } = useRole();
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
@@ -43,6 +43,32 @@ function LoginForm() {
     }
   }, [searchParams]);
 
+  const syncCustomerProfile = (userEmailInput: string) => {
+    const targetEmail = userEmailInput.trim().toLowerCase();
+    const existingCust = customers.find((c) => c.email.toLowerCase() === targetEmail);
+    const existingApp = paluwaganApplications.find((a) => a.customerEmail.toLowerCase() === targetEmail);
+    
+    let registeredName = existingCust?.fullName || existingApp?.fullName;
+    if (!registeredName) {
+      const savedName = localStorage.getItem("delmar_user_name");
+      const savedEmail = localStorage.getItem("delmar_user_email");
+      if (savedName && savedEmail?.toLowerCase() === targetEmail && savedName !== "John Doe") {
+        registeredName = savedName;
+      } else {
+        // Derive clean name from email prefix (e.g. maria.santos@email.com -> Maria Santos)
+        const prefix = targetEmail.split("@")[0].replace(/[._-]/g, " ");
+        registeredName = prefix.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      }
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("delmar_user_name", registeredName);
+      localStorage.setItem("delmar_user_email", targetEmail);
+      localStorage.setItem("profile_name", registeredName);
+    }
+    updateProfile(registeredName, targetEmail, existingCust?.phone || "09464544973", existingCust?.address || "Purok Lapu-Lapu, Tickwas, Dumalinao, Zamboanga del Sur");
+  };
+
   const handleFormLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -61,6 +87,10 @@ function LoginForm() {
     }
 
     const targetRole = email.toLowerCase() === "admin@delmarfarm.com" ? "admin" : "customer";
+
+    if (targetRole === "customer") {
+      syncCustomerProfile(email);
+    }
 
     try {
       if (isSupabasePlaceholder) {

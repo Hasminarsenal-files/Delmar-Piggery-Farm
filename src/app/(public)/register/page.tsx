@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { User, Mail, Lock, Phone, ArrowLeft, MailCheck, Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
-  const { setRole, addCustomerAccount } = useRole();
+  const { setRole, addCustomerAccount, updateProfile } = useRole();
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -24,19 +24,29 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      // Connect customer's registered full name to user session
+      if (typeof window !== "undefined") {
+        localStorage.setItem("delmar_user_name", form.name);
+        localStorage.setItem("delmar_user_email", form.email);
+        localStorage.setItem("profile_name", form.name);
+        if (form.phone) localStorage.setItem("delmar_user_phone", form.phone);
+      }
+      updateProfile(form.name, form.email, form.phone || "09464544973", "Purok Lapu-Lapu, Tickwas, Dumalinao, Zamboanga del Sur");
+
+      await addCustomerAccount({
+        fullName: form.name,
+        email: form.email,
+        phone: form.phone || "N/A",
+        address: "Purok Lapu-Lapu, Tickwas, Dumalinao, Zamboanga del Sur",
+        status: "Active"
+      });
+
       if (isSupabasePlaceholder) {
         console.log("Supabase in placeholder mode. Performing local register simulation.");
-        await addCustomerAccount({
-          fullName: form.name,
-          email: form.email,
-          phone: form.phone || "N/A",
-          address: "N/A",
-          status: "Active"
-        });
         setSuccess(true);
         setTimeout(() => {
           setRole("customer");
-        }, 2000);
+        }, 1500);
         return;
       }
 
@@ -54,6 +64,9 @@ export default function RegisterPage() {
       if (authErr) throw authErr;
 
       setSuccess(true);
+      setTimeout(() => {
+        setRole("customer");
+      }, 1500);
     } catch (err: any) {
       const errMsg = String(err?.message || err || "").toLowerCase();
       if (
@@ -62,12 +75,12 @@ export default function RegisterPage() {
         errMsg.includes("typeerror") || 
         errMsg.includes("cors")
       ) {
-        // Graceful fallback to client simulation
+        // Graceful fallback to client simulation with registered credentials
         setError("");
         setSuccess(true);
         setTimeout(() => {
           setRole("customer");
-        }, 2000);
+        }, 1500);
       } else {
         setError(err?.message || String(err) || "Failed to create account. Please try again.");
       }

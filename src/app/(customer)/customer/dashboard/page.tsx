@@ -94,15 +94,17 @@ export default function CustomerDashboard() {
     setLocalNotifs(notifications);
   }, [notifications]);
 
-  // Profile name state synced with localStorage
+  // Profile name state synced with user context and localStorage
   const [profileName, setProfileName] = useState(userName);
   
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedName = localStorage.getItem("profile_name");
+    if (userName && userName !== "John Doe") {
+      setProfileName(userName);
+    } else if (typeof window !== "undefined") {
+      const savedName = localStorage.getItem("delmar_user_name") || localStorage.getItem("profile_name");
       if (savedName) setProfileName(savedName);
     }
-  }, []);
+  }, [userName]);
 
   // Modal Dialogs
   const [isReserveOpen, setIsReserveOpen] = useState(false);
