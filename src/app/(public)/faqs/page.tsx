@@ -322,7 +322,7 @@ export default function FAQsPage() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
-          className="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-none justify-start md:justify-center"
+          className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 max-w-5xl mx-auto px-2 py-2"
         >
           {categories.map((cat) => {
             const Icon = cat.icon;
@@ -333,13 +333,13 @@ export default function FAQsPage() {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold whitespace-nowrap transition-all duration-300 cursor-pointer shadow-md ${
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold whitespace-nowrap transition-all duration-300 cursor-pointer shadow-md ${
                   isSelected
                     ? "bg-emerald-600 text-white border border-emerald-400 shadow-emerald-950/60 scale-105"
                     : "bg-[#111E18] text-slate-300 border border-emerald-900/50 hover:bg-[#182820] hover:text-white"
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isSelected ? "text-amber-300" : "text-emerald-400"}`} />
+                <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-amber-300" : "text-emerald-400"}`} />
                 <span>{cat.name}</span>
                 <span
                   className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
