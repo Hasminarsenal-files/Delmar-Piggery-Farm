@@ -1,21 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRole } from "@/context/RoleContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle2, User, Phone, Mail, MapPin, Wallet } from "lucide-react";
 
 export default function CustomerProfilePage() {
-  const { userName, userEmail } = useRole();
+  const { userName, userEmail, userPhone, userAddress, updateProfile } = useRole();
   const [name, setName] = useState(userName);
   const [email, setEmail] = useState(userEmail);
-  const [phone, setPhone] = useState("0912 345 6789");
-  const [address, setAddress] = useState("Purok 2, Brgy. San Juan, Aliaga, Nueva Ecija");
+  const [phone, setPhone] = useState(userPhone);
+  const [address, setAddress] = useState(userAddress);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    setName(userName);
+    setEmail(userEmail);
+    setPhone(userPhone);
+    setAddress(userAddress);
+  }, [userName, userEmail, userPhone, userAddress]);
 
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
+    updateProfile(name, email, phone, address);
     setSuccess(true);
     setTimeout(() => {
       setSuccess(false);

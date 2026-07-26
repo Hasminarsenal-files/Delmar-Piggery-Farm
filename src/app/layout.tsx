@@ -16,9 +16,9 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Delmar Piggery Farm | Premium Livestock & Pork Products",
-  description: "Manage stock, reservation tracking, and orders for piglets, fattening pigs, and crispylicious lechon catering at Delmar Piggery Farm.",
-  keywords: ["Delmar Piggery Farm", "Piggery Management", "Piglets", "Fattening Pigs", "Lechon Catering", "Fresh Pork Meat"],
+  title: "Savorlicious Food Services | Premium Livestock & Catering",
+  description: "Manage stock, reservation tracking, and orders for piglets, fattening pigs, and crispylicious lechon catering at Savorlicious Food Services.",
+  keywords: ["Savorlicious Food Services", "Piggery Management", "Piglets", "Fattening Pigs", "Lechon Catering", "Fresh Pork Meat"],
 };
 
 export default function RootLayout({

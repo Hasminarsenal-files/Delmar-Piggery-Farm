@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRole } from "@/context/RoleContext";
+import { getReservationDetails } from "@/utils/pricing";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
@@ -69,7 +70,7 @@ export default function AdminReservationsPage() {
                     <div className="font-bold text-xs text-slate-800">{r.customerName}</div>
                     <span className="text-[9px] text-slate-400 font-semibold block">{r.customerEmail}</span>
                   </TableCell>
-                  <TableCell className="font-bold text-xs text-slate-800">{r.category}</TableCell>
+                  <TableCell className="font-bold text-xs text-slate-800">{getReservationDetails(r.category, r.price, r.quantity)}</TableCell>
                   <TableCell className="font-bold text-xs">{r.quantity}</TableCell>
                   <TableCell className="text-xs font-medium text-slate-500">{r.pickupDate}</TableCell>
                   <TableCell className="font-bold text-xs text-slate-800">₱{r.price.toLocaleString()}</TableCell>

@@ -40,11 +40,11 @@ export default function CustomerOrdersPage() {
               {customerOrders.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell className="font-bold text-[11px] text-slate-550">{o.id}</TableCell>
-                  <TableCell className="font-bold text-xs text-slate-800 max-w-[200px] truncate" title={o.items}>
-                    {o.items}
+                  <TableCell className="font-bold text-xs text-slate-800 max-w-[200px] truncate" title={o.product}>
+                    {o.product}
                   </TableCell>
-                  <TableCell className="text-xs font-medium text-slate-500">{o.category}</TableCell>
-                  <TableCell className="text-xs font-medium text-slate-500">{o.orderDate}</TableCell>
+                  <TableCell className="text-xs font-medium text-slate-500">{o.orderType}</TableCell>
+                  <TableCell className="text-xs font-medium text-slate-500">{o.dateCreated}</TableCell>
                   <TableCell className="font-bold text-xs text-slate-800">₱{o.totalAmount.toLocaleString()}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
@@ -72,7 +72,7 @@ export default function CustomerOrdersPage() {
 
       <div className="flex items-start gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] text-slate-500 leading-relaxed font-medium">
         <Info className="w-4 h-4 text-primary-500 shrink-0 mt-0.5" />
-        <span>For complaints regarding order packaging, weights, or delivery schedules, please coordinate with our support line at +63 912 345 6789.</span>
+        <span>For complaints regarding order packaging, weights, or delivery schedules, please coordinate with our support line at 09464544973.</span>
       </div>
     </div>
   );

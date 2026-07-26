@@ -6,10 +6,10 @@ import { supabase, isSupabasePlaceholder } from "@/utils/supabaseClient";
 import { useRole } from "@/context/RoleContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { PiggyBank, User, Mail, Lock, Phone, ArrowLeft, MailCheck, Eye, EyeOff } from "lucide-react";
+import { User, Mail, Lock, Phone, ArrowLeft, MailCheck, Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
-  const { setRole } = useRole();
+  const { setRole, addCustomerAccount } = useRole();
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -26,6 +26,13 @@ export default function RegisterPage() {
     try {
       if (isSupabasePlaceholder) {
         console.log("Supabase in placeholder mode. Performing local register simulation.");
+        await addCustomerAccount({
+          fullName: form.name,
+          email: form.email,
+          phone: form.phone || "N/A",
+          address: "N/A",
+          status: "Active"
+        });
         setSuccess(true);
         setTimeout(() => {
           setRole("customer");
@@ -75,11 +82,12 @@ export default function RegisterPage() {
         
         {/* Header */}
         <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <div className="bg-primary-600 text-white p-1.5 rounded-lg">
-              <PiggyBank className="w-5 h-5" />
-            </div>
-            <span className="font-heading font-extrabold text-slate-800 text-sm tracking-wide">Delmar Farm</span>
+          <Link href="/" className="inline-flex items-center justify-center">
+            <img 
+              src="/logo.jpg" 
+              alt="Delmar Piggery Farm Logo" 
+              className="h-16 w-auto object-contain"
+            />
           </Link>
           <h2 className="text-2xl font-extrabold font-heading text-slate-800 tracking-tight">Create Customer Account</h2>
           <p className="text-xs text-slate-500 font-medium">Join us to book piglets and manage catering reservations.</p>

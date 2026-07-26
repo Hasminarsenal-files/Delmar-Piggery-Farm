@@ -1,70 +1,63 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card } from "@/components/ui/Card";
-import { Sparkles, Eye, X, HelpCircle, Image as ImageIcon } from "lucide-react";
+import { ShieldCheck, Eye, X, FileText, CheckCircle2 } from "lucide-react";
 
 export default function GalleryPage() {
   const [activeFilter, setActiveFilter] = useState("All");
-  const [selectedPhoto, setSelectedPhoto] = useState<typeof photos[0] | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<typeof documents[0] | null>(null);
 
-  const filters = ["All", "Pigs & Pens", "Meat Processing", "Catering & Lechon"];
+  const filters = ["All", "Registrations", "Clearances & Health"];
 
-  const photos = [
+  const documents = [
     {
       id: 1,
-      title: "Pedigree Duroc Breeder",
-      category: "Pigs & Pens",
-      caption: "Our prize breeding boars chosen for strong muscle growth and excellent posture.",
-      color: "from-amber-800 to-amber-950",
+      title: "Mayor's Business Permit",
+      category: "Clearances & Health",
+      agency: "Municipal Government Office",
+      caption: "Official business operations permit authorizing commercial livestock raising, wholesale distribution, and agricultural operations.",
+      img: "/img/permits/4084ccd4-0af8-4daf-bc54-09b7b60a813c.jpg",
+      verified: true,
+      certNo: "BP-2026-90812",
     },
     {
       id: 2,
-      title: "Evaporative Cooling Pen",
-      category: "Pigs & Pens",
-      caption: "Climate-controlled nursery pens keeping weanling temperature at exactly 28°C.",
-      color: "from-emerald-800 to-emerald-950",
+      title: "DTI Certificate of Registration",
+      category: "Registrations",
+      agency: "Department of Trade & Industry",
+      caption: "Certificate of Business Name Registration legally registering the name 'Savorlicious Food Services' under the national commercial registry.",
+      img: "/img/permits/232b3e43-c7fa-4302-b720-ce70296afac6.jpg",
+      verified: true,
+      certNo: "DTI-08712398",
     },
     {
       id: 3,
-      title: "Hygienic Butchery Chamber",
-      category: "Meat Processing",
-      caption: "Stainless steel partition room where carcass cuts are prepared, packed, and blast chilled.",
-      color: "from-slate-700 to-slate-900",
-    },
-    {
-      id: 4,
-      title: "Vaccination Record Desk",
-      category: "Pigs & Pens",
-      caption: "Ensuring digital tracking of tags and vaccination logs with our licensed farm vet.",
-      color: "from-teal-800 to-teal-950",
-    },
-    {
-      id: 5,
-      title: "Spit-Roast Lechon Spit",
-      category: "Catering & Lechon",
-      caption: "Aromatic herbs and spice stuffing roasted over slow charcoal heat for maximum crackling skin.",
-      color: "from-orange-850 to-orange-950",
-    },
-    {
-      id: 6,
-      title: "Banquet Wedding Catering",
-      category: "Catering & Lechon",
-      caption: "Buffet design layout complete with server personnel, sweet corner tables, and custom floral sets.",
-      color: "from-indigo-850 to-indigo-950",
+      title: "BIR Certificate of Registration (Form 2303)",
+      category: "Registrations",
+      agency: "Bureau of Internal Revenue",
+      caption: "Official tax registration and compliance ledger certificate authorizing formal invoices, receipt billing, and retail commercial tax compliance.",
+      img: "/img/permits/918a490c-a052-420b-aa67-aa7ad48095e4.jpg",
+      verified: true,
+      certNo: "BIR-Form-2303-998",
     },
   ];
 
-  const filteredPhotos = photos.filter((p) => activeFilter === "All" || p.category === activeFilter);
+  const filteredDocs = documents.filter((doc) => activeFilter === "All" || doc.category === activeFilter);
 
   return (
-    <div className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 font-sans">
+    <div className="pt-6 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 font-sans">
       
       {/* Title */}
-      <div className="text-center max-w-2xl mx-auto space-y-3">
-        <h1 className="text-3xl font-extrabold font-heading text-slate-800 tracking-tight">Our Farm Gallery</h1>
+      <div className="text-center max-w-2xl mx-auto space-y-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-xs font-bold text-emerald-700 uppercase tracking-wide animate-pulse">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Legally Registered & Compliant</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold font-heading text-slate-800 tracking-tight">
+          Legality & Business Permits
+        </h1>
         <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
-          Take a visual tour through our biosecure climate pens, processing facilities, and roasting ovens.
+          At Savorlicious Food Services, we operate under full compliance with local municipal laws, environmental bureaus, and agricultural sanitary departments. Inspect our registration permits below.
         </p>
       </div>
 
@@ -76,7 +69,7 @@ export default function GalleryPage() {
             onClick={() => setActiveFilter(f)}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeFilter === f
-                ? "bg-primary-600 text-white shadow-sm"
+                ? "bg-emerald-600 text-white shadow-sm"
                 : "bg-white border border-[#e6e8e6] text-slate-600 hover:bg-slate-50"
             }`}
           >
@@ -85,66 +78,81 @@ export default function GalleryPage() {
         ))}
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredPhotos.map((p) => (
+      {/* Grid of Documents */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {filteredDocs.map((doc) => (
           <div
-            key={p.id}
-            onClick={() => setSelectedPhoto(p)}
-            className="group cursor-pointer bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5"
+            key={doc.id}
+            onClick={() => setSelectedDoc(doc)}
+            className="group cursor-pointer bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 relative aspect-[3/4] w-full flex items-center justify-center p-5"
           >
-            {/* Visual Placeholder */}
-            <div className={`aspect-video w-full bg-gradient-to-tr ${p.color} relative flex items-center justify-center p-6`}>
-              <ImageIcon className="absolute top-4 left-4 w-5 h-5 text-white/30" />
-              <div className="text-center space-y-1 text-white/90">
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">{p.category}</span>
-                <div className="text-sm font-bold tracking-tight font-heading">{p.title}</div>
-              </div>
-              <div className="absolute inset-0 bg-primary-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
-                <div className="bg-white/20 backdrop-blur-md p-3 rounded-full text-white border border-white/20">
-                  <Eye className="w-5 h-5" />
-                </div>
+            <img
+              src={doc.img}
+              alt={doc.title}
+              className="max-h-full max-w-full object-contain shadow-md rounded-lg group-hover:scale-102 transition-transform duration-500"
+            />
+            
+            {/* Hover Quick View Overlay */}
+            <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
+              <div className="bg-white/20 backdrop-blur-md p-3.5 rounded-full text-white border border-white/20 flex items-center justify-center">
+                <Eye className="w-5 h-5" />
               </div>
             </div>
 
-            {/* Description */}
-            <div className="p-5 space-y-1 bg-white">
-              <h3 className="text-xs font-bold text-slate-800">{p.title}</h3>
-              <p className="text-[10px] text-slate-400 font-bold tracking-wide uppercase">{p.category}</p>
-              <p className="text-[11px] text-slate-500 leading-relaxed font-medium mt-2">{p.caption}</p>
-            </div>
+            {/* Verified Badge */}
+            {doc.verified && (
+              <span className="absolute top-4 left-4 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[9px] font-extrabold uppercase shadow-sm">
+                <CheckCircle2 className="w-3 h-3" />
+                Verified
+              </span>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Lightbox Modal */}
-      {selectedPhoto && (
+      {/* Lightbox / Zoom Modal */}
+      {selectedDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs" onClick={() => setSelectedPhoto(null)} />
-          <div className="relative bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl border border-slate-800/10 z-10 animate-in zoom-in-95 duration-200">
-            {/* Image Placeholder */}
-            <div className={`aspect-video w-full bg-gradient-to-tr ${selectedPhoto.color} flex items-center justify-center relative p-8`}>
-              <ImageIcon className="w-16 h-16 text-white/20" />
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs" onClick={() => setSelectedDoc(null)} />
+          <div className="relative bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-800/10 z-10 animate-in zoom-in-95 duration-200 flex flex-col">
+            {/* Scrollable Document Area */}
+            <div className="bg-slate-100 p-8 flex items-center justify-center max-h-[70vh] overflow-y-auto relative">
+              <img
+                src={selectedDoc.img}
+                alt={selectedDoc.title}
+                className="max-h-full max-w-full object-contain shadow-xl rounded-xl"
+              />
               <button
-                onClick={() => setSelectedPhoto(null)}
-                className="absolute top-4 right-4 p-1.5 rounded-full bg-black/35 hover:bg-black/50 text-white transition-colors cursor-pointer"
+                onClick={() => setSelectedDoc(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-900/60 hover:bg-slate-900/80 text-white transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             
-            <div className="p-6 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-lg uppercase tracking-wide">
-                  {selectedPhoto.category}
-                </span>
+            {/* Info details */}
+            <div className="p-6 space-y-3 bg-white border-t border-slate-100">
+              <div className="flex justify-between items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg uppercase tracking-wide border border-emerald-100">
+                    {selectedDoc.agency}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg uppercase tracking-wide">
+                    {selectedDoc.category}
+                  </span>
+                </div>
+                <div className="text-[10px] font-bold text-slate-400 font-mono">
+                  No: {selectedDoc.certNo}
+                </div>
               </div>
-              <h3 className="font-heading text-lg font-bold text-slate-800">{selectedPhoto.title}</h3>
-              <p className="text-xs text-slate-500 leading-relaxed font-medium">{selectedPhoto.caption}</p>
+              <h3 className="font-heading text-lg font-bold text-slate-800">{selectedDoc.title}</h3>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">{selectedDoc.caption}</p>
             </div>
           </div>
         </div>
       )}
+
+
 
     </div>
   );

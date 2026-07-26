@@ -24,8 +24,8 @@ export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState<"general" | "ai">("general");
 
   // General Settings States
-  const [farmName, setFarmName] = useState("Delmar Piggery Farm");
-  const [contactPhone, setContactPhone] = useState("+63 912 345 6789");
+  const [farmName, setFarmName] = useState("Savorlicious Food Services");
+  const [contactPhone, setContactPhone] = useState("09464544973");
   const [biosecurityAlerts, setBiosecurityAlerts] = useState(true);
   const [autoApproveReservations, setAutoApproveReservations] = useState(false);
   const [sensorLogs, setSensorLogs] = useState(true);

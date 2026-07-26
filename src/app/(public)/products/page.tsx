@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useRole } from "@/context/RoleContext";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -8,7 +9,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Search, Filter, ShoppingBag, CheckCircle2, ShieldAlert } from "lucide-react";
 
 export default function ProductsPage() {
-  const { addReservation } = useRole();
+  const { role, addReservation } = useRole();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("All");
   
@@ -24,66 +26,130 @@ export default function ProductsPage() {
   const productsList = [
     {
       id: "p1",
-      title: "Hybrid Weanlings (F1)",
+      title: "Regular Piglet",
       category: "Piglets",
-      description: "Landrace x Large White crossbred piglets. Highly energetic, dewormed, and feed-ready. Weight range: 12kg - 15kg.",
+      description: "Standard hybrid weanling piglet raised on balanced bio-feeds. Vaccinated and dewormed. Weight: 12kg - 15kg.",
       price: 3500,
+      unit: "per head",
       stockStatus: "Available",
       specifications: "Age: 8-10 weeks | Vaccinated",
     },
     {
       id: "p2",
-      title: "Purebred Duroc Piglets",
+      title: "Sowlet (Female Piglet)",
       category: "Piglets",
-      description: "Excellent red Duroc piglets selected for fat marble meat properties and strong muscular frames. Weight range: 14kg - 18kg.",
-      price: 4500,
-      stockStatus: "Low Stock",
-      specifications: "Age: 9 weeks | Pedigree Certified",
+      description: "Select female piglet optimized for breeding cycles and future litter productivity.",
+      price: 6500,
+      unit: "per head",
+      stockStatus: "Available",
+      specifications: "Age: 9 weeks | Selected Breeder",
     },
     {
       id: "p3",
-      title: "Grower Pigs",
-      category: "Fattening Pigs",
-      description: "Healthy grower pigs raised on balanced bio-feed. Ideal for short fattening cycles. Weight range: 40kg - 55kg.",
-      price: 7500,
+      title: "Boarlet (Male Piglet)",
+      category: "Piglets",
+      description: "Premium male piglet with excellent sire genetics, selected specifically for breeding stock.",
+      price: 5000,
+      unit: "per head",
       stockStatus: "Available",
-      specifications: "Age: 14 weeks | Health Card Included",
+      specifications: "Age: 9-10 weeks | Selected Stud",
     },
     {
       id: "p4",
-      title: "Market-Ready Fattening Hog",
+      title: "Fattening Hog",
       category: "Fattening Pigs",
-      description: "Fattened pigs raised on natural plant proteins. Perfect yield ratios for slaughterhouses. Weight range: 90kg - 110kg.",
-      price: 12000,
+      description: "Commercial grower finish hog ready for final finishing fattening cycles.",
+      price: 200,
+      unit: "per head",
       stockStatus: "Available",
-      specifications: "Age: 22 weeks | Yield Rate > 78%",
+      specifications: "Age: 12 weeks | Bio-Feed Diet",
     },
     {
       id: "p5",
-      title: "Premium Pork Liempo (Belly)",
+      title: "Pork Belly (Liempo)",
       category: "Fresh Pork Meat",
       description: "Triple-layered premium liempo cuts, perfect for grilling, lechon kawali, or slow braising. Cleanly butchered.",
-      price: 340,
+      price: 320,
       unit: "per kg",
       stockStatus: "Available",
       specifications: "Vacuum Sealed | Freshly Chilled",
     },
     {
       id: "p6",
-      title: "Pork Kasim / Shoulder",
+      title: "Pork Loin",
+      category: "Fresh Pork Meat",
+      description: "Tender, lean pork loin cuts. Ideal for roasting, pork chops, or lean cutlet preparation.",
+      price: 290,
+      unit: "per kg",
+      stockStatus: "Available",
+      specifications: "Vacuum Sealed | Freshly Chilled",
+    },
+    {
+      id: "p7",
+      title: "Pork Ribs",
+      category: "Fresh Pork Meat",
+      description: "Fleshy bone cuts, packed with marbling. Excellent for oven baking or sweet-sour glaze preparation.",
+      price: 290,
+      unit: "per kg",
+      stockStatus: "Available",
+      specifications: "Vacuum Sealed | Freshly Chilled",
+    },
+    {
+      id: "p8",
+      title: "Pork Shoulder (Kasim)",
       category: "Fresh Pork Meat",
       description: "Lean, tender pork shoulder cuts, ideal for standard Filipino stews (adobo, sinigang, menudo). Freshly prepped.",
-      price: 295,
+      price: 290,
       unit: "per kg",
       stockStatus: "Available",
       specifications: "Vacuum Sealed | Hygienically butchered",
     },
     {
-      id: "p7",
-      title: "Pork Spareribs",
+      id: "p9",
+      title: "Pork Leg / Ham (Pata)",
       category: "Fresh Pork Meat",
-      description: "Fleshy bone cuts, packed with marbling. Excellent for oven baking or sweet-sour glaze preparation.",
-      price: 310,
+      description: "Meaty pork leg bone cuts, perfect for crispy pata or pata hamonado preparations.",
+      price: 290,
+      unit: "per kg",
+      stockStatus: "Available",
+      specifications: "Vacuum Sealed | Freshly Chilled",
+    },
+    {
+      id: "p10",
+      title: "Pork Liver (Atay)",
+      category: "Fresh Pork Meat",
+      description: "Nutrient-dense fresh pork liver, excellent for menudo, sisig, or local liver sauces.",
+      price: 250,
+      unit: "per kg",
+      stockStatus: "Available",
+      specifications: "Vacuum Sealed | Freshly Chilled",
+    },
+    {
+      id: "p11",
+      title: "Pig's Feet (Tiil / Trotters)",
+      category: "Fresh Pork Meat",
+      description: "Cleanly split trotters, high in collagen. Ideal for paksiw na pata or slow-simmered soups.",
+      price: 250,
+      unit: "per kg",
+      stockStatus: "Available",
+      specifications: "Vacuum Sealed | Freshly Chilled",
+    },
+    {
+      id: "p12",
+      title: "Pork Intestines (Tinae)",
+      category: "Fresh Pork Meat",
+      description: "Thoroughly cleaned pork intestines, perfect for chicharon bulaklak or local stews.",
+      price: 150,
+      unit: "per kg",
+      stockStatus: "Available",
+      specifications: "Vacuum Sealed | Freshly Chilled",
+    },
+    {
+      id: "p13",
+      title: "Pork Head (Ulo)",
+      category: "Fresh Pork Meat",
+      description: "Freshly prepared pork head cuts, ideal for authentic sisig or dinuguan recipes.",
+      price: 170,
       unit: "per kg",
       stockStatus: "Available",
       specifications: "Vacuum Sealed | Freshly Chilled",
@@ -91,13 +157,20 @@ export default function ProductsPage() {
   ];
 
   const filteredProducts = productsList.filter((p) => {
-    const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = p.title.toLowerCase().includes(searchLower) || 
+                          p.description.toLowerCase().includes(searchLower) ||
+                          p.category.toLowerCase().includes(searchLower) ||
+                          (p.specifications && p.specifications.toLowerCase().includes(searchLower));
     const matchesCategory = activeCategory === "All" || p.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
   const handleOpenReserve = (product: typeof productsList[0]) => {
+    if (role === "guest") {
+      router.push("/login");
+      return;
+    }
     setReserveProduct({
       title: product.title,
       category: product.category,
@@ -128,12 +201,12 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+    <div className="pt-6 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
       {/* Title */}
       <div className="space-y-3 text-center max-w-2xl mx-auto">
         <h1 className="text-3xl font-extrabold font-heading text-slate-800 tracking-tight">Our Products Catalog</h1>
         <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
-          Order healthy piglets, heavy growers, or fresh, hygienically sealed retail pork cuts directly from Nueva Ecija's trusted piggery.
+          Order healthy piglets, heavy growers, or fresh, hygienically sealed retail pork cuts directly from our trusted piggery.
         </p>
       </div>
 
@@ -141,14 +214,22 @@ export default function ProductsPage() {
       <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
         {/* Search */}
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Search products..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-medium"
+            className="w-full text-xs pl-10 pr-8 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-medium"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 font-bold text-xs cursor-pointer p-1"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Categories Tabs */}
@@ -168,6 +249,17 @@ export default function ProductsPage() {
           ))}
         </div>
       </div>
+
+      {/* Free Delivery Promo Banner */}
+      {(activeCategory === "All" || activeCategory === "Fresh Pork Meat") && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between gap-4 text-xs font-bold text-emerald-800">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>🚚 FREE DELIVERY on all fresh pork meat orders within **Guipos, Dumalinao, and Pagadian**!</span>
+          </div>
+          <span className="text-[10px] uppercase font-extrabold tracking-wider bg-emerald-100 text-emerald-850 px-2 py-0.5 rounded-md">Promo</span>
+        </div>
+      )}
 
       {/* Products Grid */}
       {filteredProducts.length === 0 ? (

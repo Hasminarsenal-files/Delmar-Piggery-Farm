@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useRole } from "@/context/RoleContext";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -8,7 +9,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Award, CheckCircle2, ShieldCheck, Soup, CakeSlice, UtensilsCrossed } from "lucide-react";
 
 export default function ServicesPage() {
-  const { addReservation } = useRole();
+  const { addReservation, role } = useRole();
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<{ title: string; price: number } | null>(null);
   const [reserveQty, setReserveQty] = useState(1);
@@ -20,47 +22,64 @@ export default function ServicesPage() {
       title: "Crispylicious Lechon",
       icon: Award,
       tagline: "Our Signature Spit-Roasted Pig",
+      img: "/lechon.jpg",
       description: "Delmar's lechon is roasted using slow-burning charcoal, yielding incredibly golden-crisp skin and seasoned meat infused with lemongrass, garlic, onions, and local spices.",
       packages: [
-        { name: "Small Lechon (12kg - 14kg)", price: 8500, servings: "Suitable for 15-20 guests" },
-        { name: "Medium Lechon (15kg - 18kg)", price: 10500, servings: "Suitable for 25-35 guests" },
-        { name: "Large Lechon (19kg - 22kg)", price: 12500, servings: "Suitable for 40-50 guests" },
+        { name: "Small Lechon (15kg)", price: 6500, servings: "Suitable for 10-15 guests | 100% Chicharon skin" },
+        { name: "Small Lechon (20kg)", price: 7500, servings: "Suitable for 15-20 guests | 100% Chicharon skin" },
+        { name: "Small Lechon (25kg)", price: 8500, servings: "Suitable for 20-25 guests | 100% Chicharon skin" },
+        { name: "Medium Lechon (30kg)", price: 9500, servings: "Suitable for 25-30 guests | Slow charcoal roasted" },
+        { name: "Medium Lechon (35kg)", price: 10500, servings: "Suitable for 30-35 guests | Slow charcoal roasted" },
+        { name: "Medium Lechon (40kg)", price: 11500, servings: "Suitable for 35-40 guests | Slow charcoal roasted" },
+        { name: "Large Lechon (45kg)", price: 12500, servings: "Suitable for 40-45 guests | Premium farm selected" },
+        { name: "Large Lechon (50kg)", price: 13500, servings: "Suitable for 45-50 guests | Premium farm selected" },
+        { name: "Large Lechon (55kg)", price: 14500, servings: "Suitable for 50-55 guests | Premium farm selected" },
       ],
     },
     {
       title: "Catering Services",
       icon: UtensilsCrossed,
       tagline: "Full Banquet Buffets & Event Setup",
+      img: "/catering.jpg",
       description: "Elegant agricultural banquet catering for weddings, family reunions, and civic assemblies. Includes tables, chairs, waiters, and customized menus.",
       packages: [
-        { name: "Standard Buffet Package (Min. 50 pax)", price: 12500, servings: "₱250 per head | 4 main courses" },
-        { name: "Deluxe Feast Package (Min. 50 pax)", price: 17500, servings: "₱350 per head | 5 main courses + dessert" },
-        { name: "VIP Royal Package (Min. 100 pax)", price: 40000, servings: "₱400 per head | Includes small Lechon" },
+        { name: "SET A", price: 12500, servings: "2 main course, 1 sidedish, rice, soda, dessert" },
+        { name: "SET B", price: 14500, servings: "3 main course, 1 sidedish, rice, soda, dessert" },
+        { name: "SET C", price: 17000, servings: "4 main course, 1 sidedish, rice, soda, dessert" },
       ],
     },
     {
-      title: "Sweet Corners",
+      title: "Sweet Corners & Packages",
       icon: CakeSlice,
       tagline: "Traditional & Modern Dessert Bars",
-      description: "Delight your guests with custom dessert bars containing traditional Nueva Ecija kakanin (rice cakes), sweet cassava, fresh fruit selections, and cupcakes.",
+      img: "/sweet_corners.png",
+      description: "Delight your guests with custom dessert bars containing traditional local kakanin (rice cakes), sweet cassava, fresh fruit selections, and cupcakes.",
       packages: [
-        { name: "Traditional Sweet Corner", price: 4500, servings: "Kakanin platter assortment | Up to 50 guests" },
-        { name: "Premium Dessert Display", price: 7500, servings: "Choco fountain, kakanin, pastries | Up to 100 guests" },
+        { name: "Sweets Package Set A", price: 3650, servings: "1 layer Theme Cake (7x5), 12 pcs shotglass, 12 cupcakes, 40 cheesesquares, 40 brownies, 24 cheezy/brownies dou, 50 macaroons, 40 cake slices. Skirting/backdraft not included." },
+        { name: "Sweets Package Set B", price: 5500, servings: "1 layer Theme Cake (9x5), 20 pcs shotglass, 20 cupcakes, 40 cheesesquares, 40 brownies, 24 cheezy/brownies dou, 50 macaroons, 54 cake slices. Skirting/backdraft not included." },
+        { name: "Sweets Package Set C", price: 7500, servings: "2 tier Theme Cake, 24 pcs shotglass, 24 cupcakes, 54 cheesesquares, 54 brownies, 54 cheezy/brownies dou, 70 macaroons, 54 cake slices, 24 cake truffles. Skirting/backdraft not included." },
       ],
     },
     {
-      title: "Food Packages & Trays",
+      title: "Food Packages",
       icon: Soup,
-      tagline: "Pre-Packaged Meals & Hot Trays",
-      description: "No-hassle meal trays delivered directly to your doorstep. Perfect for corporate assemblies, small home celebrations, or sports meets.",
+      tagline: "Cooked Party Trays & Packed Meals",
+      img: "/foodpackage.jpg",
+      description: "Delicious, cooked-to-order party trays, bilao packages, and packed meals perfect for events, office gatherings, and home celebrations.",
       packages: [
-        { name: "Fiesta Food Tray Set (A)", price: 3500, servings: "For 10-12 guests | Pork Adobo, Pansit, Shanghai" },
-        { name: "Fiesta Food Tray Set (B)", price: 4500, servings: "For 10-12 guests | Sweet Pork Ribs, Beef Caldereta" },
+        { name: "Packed Meal Set A", price: 180, servings: "Pork Liempo, Rice, Pancit Guisado, and bottled drink" },
+        { name: "Packed Meal Set B", price: 220, servings: "Beef Caldereta, Rice, Lumpiang Shanghai, and dessert" },
+        { name: "Party Tray Set A (10-15 Pax)", price: 1200, servings: "1 Tray Spaghetti, 1 Tray Buttered Chicken, 1 Tray Pork Lumpia" },
+        { name: "Bilao Package (15-20 Pax)", price: 1500, servings: "1 Large Pancit Guisado Bilao, 20 pcs Pork BBQ, 20 pcs Puto" },
       ],
     },
   ];
 
   const handleOpenBook = (pkg: { name: string; price: number }) => {
+    if (role === "guest") {
+      router.push("/login");
+      return;
+    }
     setSelectedService({
       title: pkg.name,
       price: pkg.price,
@@ -90,13 +109,13 @@ export default function ServicesPage() {
   };
 
   return (
-    <div className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+    <div className="pt-6 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
       
       {/* Title */}
       <div className="text-center max-w-2xl mx-auto space-y-4">
         <h1 className="text-3xl font-extrabold font-heading text-slate-800 tracking-tight">Catering & Spit-Roast Services</h1>
         <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
-          From golden Crispylicious Lechon to themed buffet structures, we turn your Nueva Ecija gatherings into memorable feasts.
+          From golden Crispylicious Lechon to themed buffet structures, we turn your gatherings into memorable feasts.
         </p>
       </div>
 
@@ -112,22 +131,36 @@ export default function ServicesPage() {
               }`}
             >
               {/* Graphic Info */}
-              <div className="w-full lg:w-1/2 flex flex-col justify-center bg-white rounded-3xl border border-slate-100 p-8 sm:p-10 shadow-xs">
-                <div className="flex items-center gap-3.5 mb-5">
-                  <div className="p-3.5 rounded-2xl bg-primary-50 text-primary-600">
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h2 className="font-heading text-xl font-extrabold text-slate-800 leading-snug">{sc.title}</h2>
-                    <span className="text-[11px] font-bold text-accent-light uppercase tracking-wider block">{sc.tagline}</span>
-                  </div>
+              <div className="w-full lg:w-1/2 flex flex-col bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-xs">
+                {/* Product/Service Image Cover */}
+                <div className="w-full overflow-hidden bg-slate-50 border-b border-slate-100 relative">
+                  <img
+                    src={sc.img}
+                    alt={sc.title}
+                    className="w-full h-auto block"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
                 </div>
-                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium mb-6">
-                  {sc.description}
-                </p>
-                <div className="flex items-center gap-2 text-xs font-bold text-primary-700 bg-primary-50/50 py-2.5 px-4 rounded-xl self-start">
-                  <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>Sanitary Food Safety Certified</span>
+
+                <div className="p-8 sm:p-10 flex-1 flex flex-col justify-between space-y-6">
+                  <div>
+                    <div className="flex items-center gap-3.5 mb-4">
+                      <div className="p-3.5 rounded-2xl bg-primary-50 text-primary-600">
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h2 className="font-heading text-xl font-extrabold text-slate-800 leading-snug">{sc.title}</h2>
+                        <span className="text-[11px] font-bold text-accent-light uppercase tracking-wider block">{sc.tagline}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">
+                      {sc.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-primary-700 bg-primary-50/50 py-2.5 px-4 rounded-xl self-start">
+                    <ShieldCheck className="w-4 h-4 shrink-0" />
+                    <span>Sanitary Food Safety Certified</span>
+                  </div>
                 </div>
               </div>
 
@@ -145,7 +178,9 @@ export default function ServicesPage() {
                         <span className="text-[10px] text-slate-400 font-bold block mt-0.5">{pkg.servings}</span>
                       </div>
                       <div className="text-right shrink-0 space-y-1.5">
-                        <div className="text-xs font-extrabold text-primary-800">₱{pkg.price.toLocaleString()}</div>
+                        {sc.title !== "Catering Services" && (
+                          <div className="text-xs font-extrabold text-primary-800">₱{pkg.price.toLocaleString()}</div>
+                        )}
                         <Button size="sm" variant="light" onClick={() => handleOpenBook(pkg)}>
                           Book Setup
                         </Button>

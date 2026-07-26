@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRole } from "@/context/RoleContext";
+import { useRole, OrderType } from "@/context/RoleContext";
+import { PIGLET_TYPES, LECHON_SIZES, CATERING_BUFFETS, SWEETS_PACKAGES, getReservationDetails } from "@/utils/pricing";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
@@ -9,8 +10,13 @@ import { Modal } from "@/components/ui/Modal";
 import { CalendarCheck, Plus, CheckCircle2, Info } from "lucide-react";
 
 export default function CustomerReservationsPage() {
-  const { userEmail, reservations, addReservation } = useRole();
+  const { userEmail, reservations, addReservation, paluwaganBatches, paluwaganApplications } = useRole();
   const customerReservations = reservations.filter((r) => r.customerEmail === userEmail);
+
+  // Check if customer is approved Paluwagan member
+  const isApprovedMember = paluwaganApplications.some(
+    (app) => app.customerEmail === userEmail && app.status === "Approved"
+  );
 
   // Reservation dialog
   const [isOpen, setIsOpen] = useState(false);
@@ -18,21 +24,47 @@ export default function CustomerReservationsPage() {
   const [reserveQty, setReserveQty] = useState(1);
   const [reserveDate, setReserveDate] = useState("");
   const [reserveSuccess, setReserveSuccess] = useState(false);
+  const [pigletType, setPigletType] = useState("regular");
+  const [lechonSize, setLechonSize] = useState("15kg");
+  const [cateringType, setCateringType] = useState("set-a");
+  const [orderType, setOrderType] = useState<OrderType>("Reservation");
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("");
+
+  const getSelectedUnitPrice = () => {
+    if (reserveCategory === "Piglets") {
+      const type = PIGLET_TYPES.find((p) => p.key === pigletType);
+      return type ? type.price : 3500;
+    }
+    if (reserveCategory === "Fattening Pigs") {
+      return 12000;
+    }
+    if (reserveCategory === "Crispylicious Lechon") {
+      const size = LECHON_SIZES.find((l) => l.key === lechonSize);
+      return size ? size.price : 6500;
+    }
+    if (reserveCategory === "Catering Services") {
+      if (cateringType.startsWith("set-")) {
+        const buffet = CATERING_BUFFETS.find((b) => b.key === cateringType);
+        return buffet ? buffet.price : 250;
+      } else {
+        const sweet = SWEETS_PACKAGES.find((s) => s.key === cateringType);
+        return sweet ? sweet.price : 3650;
+      }
+    }
+    return 0;
+  };
 
   const handleCreateReservation = (e: React.FormEvent) => {
     e.preventDefault();
-    const priceMap = {
-      "Piglets": 3500,
-      "Fattening Pigs": 12000,
-      "Crispylicious Lechon": 8500,
-      "Catering Services": 15000,
-    };
+    const unitPrice = getSelectedUnitPrice();
 
     addReservation({
       category: reserveCategory,
       quantity: reserveQty,
       pickupDate: reserveDate || new Date(Date.now() + 86400000 * 7).toISOString().split("T")[0],
-      price: priceMap[reserveCategory] * reserveQty,
+      price: unitPrice * reserveQty,
+      orderType,
+      batchId: orderType === "Paluwagan" ? selectedBatchId : undefined,
     });
 
     setReserveSuccess(true);
@@ -41,6 +73,8 @@ export default function CustomerReservationsPage() {
       setIsOpen(false);
       setReserveQty(1);
       setReserveDate("");
+      setOrderType("Reservation");
+      setSelectedBatchId("");
     }, 2000);
   };
 
@@ -85,7 +119,7 @@ export default function CustomerReservationsPage() {
               {customerReservations.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-bold text-[11px] text-slate-550">{r.id}</TableCell>
-                  <TableCell className="font-bold text-xs text-slate-800">{r.category}</TableCell>
+                  <TableCell className="font-bold text-xs text-slate-800">{getReservationDetails(r.category, r.price, r.quantity)}</TableCell>
                   <TableCell className="font-bold text-xs">{r.quantity}</TableCell>
                   <TableCell className="text-xs font-medium text-slate-550">{r.reservationDate}</TableCell>
                   <TableCell className="text-xs font-medium text-slate-500">{r.pickupDate}</TableCell>
@@ -128,18 +162,89 @@ export default function CustomerReservationsPage() {
               <label className="text-[10px] font-bold text-slate-700 uppercase">Product / Service Category</label>
               <select
                 value={reserveCategory}
-                onChange={(e) => setReserveCategory(e.target.value as any)}
+                onChange={(e) => {
+                  const val = e.target.value as any;
+                  setReserveCategory(val);
+                  if (val !== "Crispylicious Lechon" && orderType === "Paluwagan") {
+                    setOrderType("Reservation");
+                  }
+                }}
                 className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-primary-500/20"
               >
-                <option value="Piglets">Weanling Piglets (₱3,500/head)</option>
+                <option value="Piglets">Weanling Piglets (Weanlings & Breeders)</option>
                 <option value="Fattening Pigs">Fattening Pigs (₱12,000/head)</option>
-                <option value="Crispylicious Lechon">Crispylicious Lechon (₱8,500/order)</option>
-                <option value="Catering Services">Catering Services (₱15,000/booking)</option>
+                <option value="Crispylicious Lechon">Crispylicious Lechon (charcoal roasted)</option>
+                <option value="Catering Services">Catering Services & Dessert Packages</option>
               </select>
             </div>
 
+            {/* Sub-type selections */}
+            {reserveCategory === "Piglets" && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-700 uppercase">Piglet Sub-Type</label>
+                <select
+                  value={pigletType}
+                  onChange={(e) => setPigletType(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-semibold"
+                >
+                  {PIGLET_TYPES.map((type) => (
+                    <option key={type.key} value={type.key}>
+                      {type.label} (₱{type.price.toLocaleString()}/head)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {reserveCategory === "Crispylicious Lechon" && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-700 uppercase">Lechon Size / Weight Tiers</label>
+                <select
+                  value={lechonSize}
+                  onChange={(e) => setLechonSize(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-semibold"
+                >
+                  {LECHON_SIZES.map((size) => (
+                    <option key={size.key} value={size.key}>
+                      {size.label} (₱{size.price.toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {reserveCategory === "Catering Services" && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-700 uppercase">Catering / Sweets Package Selection</label>
+                <select
+                  value={cateringType}
+                  onChange={(e) => setCateringType(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-semibold"
+                >
+                  <optgroup label="Buffet Packages (price per pax, min. 50 pax)">
+                    {CATERING_BUFFETS.map((buffet) => (
+                      <option key={buffet.key} value={buffet.key}>
+                        {buffet.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Sweets Packages (price per package set)">
+                    {SWEETS_PACKAGES.map((sweet) => (
+                      <option key={sweet.key} value={sweet.key}>
+                        {sweet.label} (₱{sweet.price.toLocaleString()})
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+            )}
+
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-700 uppercase">Quantity Needed</label>
+              <label className="text-[10px] font-bold text-slate-700 uppercase">
+                {reserveCategory === "Catering Services" && cateringType.startsWith("set-") 
+                  ? "Number of Pax / Guests (Quantity)" 
+                  : "Quantity Needed"}
+              </label>
               <input
                 type="number"
                 min={1}
@@ -160,6 +265,65 @@ export default function CustomerReservationsPage() {
                 onChange={(e) => setReserveDate(e.target.value)}
                 className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-700 uppercase">Order Type / Payment Method</label>
+              <select
+                value={orderType}
+                onChange={(e) => {
+                  const val = e.target.value as OrderType;
+                  setOrderType(val);
+                  if (val === "Paluwagan" && paluwaganBatches.length > 0 && !selectedBatchId) {
+                    setSelectedBatchId(paluwaganBatches[0].id);
+                  }
+                }}
+                className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-semibold"
+              >
+                <option value="Reservation">Reservation (Standard 50% downpayment)</option>
+                <option value="Cash">Cash (Full payout)</option>
+                {reserveCategory === "Crispylicious Lechon" && (
+                  <option value="Paluwagan" disabled={!isApprovedMember}>
+                    Paluwagan (rotating bi-weekly savings) {!isApprovedMember ? " - (Approved members only)" : ""}
+                  </option>
+                )}
+              </select>
+              {reserveCategory === "Crispylicious Lechon" && !isApprovedMember && (
+                <span className="text-[10px] text-rose-600 font-bold block mt-1">
+                  Paluwagan is available only for approved Paluwagan members.
+                </span>
+              )}
+            </div>
+
+            {orderType === "Paluwagan" && (
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                <label className="text-[10px] font-bold text-slate-700 uppercase">Paluwagan Batch Selection</label>
+                <select
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-semibold focus:ring-2 focus:ring-[#1B4332]/20"
+                >
+                  <option value="" disabled>-- Select Paluwagan Batch --</option>
+                  {paluwaganBatches.filter(b => b.status === "Active").map(batch => (
+                    <option key={batch.id} value={batch.id}>
+                      {batch.name} (Starts: {batch.startDate})
+                    </option>
+                  ))}
+                </select>
+                <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl space-y-1">
+                  <div className="text-[10.5px] font-bold text-emerald-800 uppercase">Paluwagan Payment Preview</div>
+                  <div className="text-[10px] text-slate-550 font-semibold leading-relaxed">
+                    • **25% Down Payment:** ₱{(getSelectedUnitPrice() * reserveQty * 0.25).toLocaleString()}  
+                    • **Installment (x4 every 15 days):** ₱{(getSelectedUnitPrice() * reserveQty * 0.75 / 4).toLocaleString()}  
+                    • **Schedule:** Created automatically upon admin approval.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs flex justify-between font-bold text-slate-700">
+              <span>Unit Cost: ₱{getSelectedUnitPrice().toLocaleString()}</span>
+              <span>Total Cost: ₱{(getSelectedUnitPrice() * reserveQty).toLocaleString()}</span>
             </div>
 
             <div className="pt-2">

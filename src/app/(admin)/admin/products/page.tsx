@@ -9,11 +9,27 @@ import { Edit, Plus, Store, CheckCircle2, ShieldAlert } from "lucide-react";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState([
-    { id: "1", name: "Weanling Piglets", category: "Piglets", price: 3500, unit: "per head", status: "Active" },
-    { id: "2", name: "Fattening Pigs", category: "Fattening Pigs", price: 12000, unit: "per head", status: "Active" },
-    { id: "3", name: "Fresh Pork Belly (Liempo)", category: "Fresh Pork Meat", price: 340, unit: "per kg", status: "Active" },
-    { id: "4", name: "Crispylicious Lechon (Small)", category: "Crispylicious Lechon", price: 8500, unit: "per roasting", status: "Active" },
-    { id: "5", name: "Fiesta Food Tray Set (A)", category: "Food Packages", price: 3500, unit: "per tray set", status: "Active" },
+    { id: "1", name: "Weanling Piglets (Regular)", category: "Piglets", price: 3500, unit: "per head", status: "Active" },
+    { id: "2", name: "Weanling Piglets (Sowlet)", category: "Piglets", price: 6500, unit: "per head", status: "Active" },
+    { id: "3", name: "Weanling Piglets (Boarlet)", category: "Piglets", price: 5000, unit: "per head", status: "Active" },
+    { id: "4", name: "Weanling Piglets (Fattening)", category: "Piglets", price: 200, unit: "per head", status: "Active" },
+    { id: "5", name: "Fattening Pigs", category: "Fattening Pigs", price: 12000, unit: "per head", status: "Active" },
+    { id: "6", name: "Fresh Pork Belly (Liempo)", category: "Fresh Pork Meat", price: 340, unit: "per kg", status: "Active" },
+    { id: "7", name: "Crispylicious Lechon (15kg)", category: "Crispylicious Lechon", price: 6500, unit: "per roasting", status: "Active" },
+    { id: "8", name: "Crispylicious Lechon (20kg)", category: "Crispylicious Lechon", price: 7500, unit: "per roasting", status: "Active" },
+    { id: "9", name: "Crispylicious Lechon (25kg)", category: "Crispylicious Lechon", price: 8500, unit: "per roasting", status: "Active" },
+    { id: "10", name: "Crispylicious Lechon (30kg)", category: "Crispylicious Lechon", price: 9500, unit: "per roasting", status: "Active" },
+    { id: "11", name: "Crispylicious Lechon (35kg)", category: "Crispylicious Lechon", price: 10500, unit: "per roasting", status: "Active" },
+    { id: "12", name: "Crispylicious Lechon (40kg)", category: "Crispylicious Lechon", price: 11500, unit: "per roasting", status: "Active" },
+    { id: "13", name: "Crispylicious Lechon (45kg)", category: "Crispylicious Lechon", price: 12500, unit: "per roasting", status: "Active" },
+    { id: "14", name: "Crispylicious Lechon (50kg)", category: "Crispylicious Lechon", price: 13500, unit: "per roasting", status: "Active" },
+    { id: "15", name: "Crispylicious Lechon (55kg)", category: "Crispylicious Lechon", price: 14500, unit: "per roasting", status: "Active" },
+    { id: "16", name: "Catering Buffet Set A", category: "Food Packages", price: 250, unit: "per pax", status: "Active" },
+    { id: "17", name: "Catering Buffet Set B", category: "Food Packages", price: 290, unit: "per pax", status: "Active" },
+    { id: "18", name: "Catering Buffet Set C", category: "Food Packages", price: 340, unit: "per pax", status: "Active" },
+    { id: "19", name: "Sweets Package Set A", category: "Food Packages", price: 3650, unit: "per package", status: "Active" },
+    { id: "20", name: "Sweets Package Set B", category: "Food Packages", price: 5500, unit: "per package", status: "Active" },
+    { id: "21", name: "Sweets Package Set C", category: "Food Packages", price: 7500, unit: "per package", status: "Active" },
   ]);
 
   const [isOpen, setIsOpen] = useState(false);

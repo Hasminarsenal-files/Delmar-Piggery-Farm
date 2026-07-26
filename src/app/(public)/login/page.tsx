@@ -7,7 +7,7 @@ import { useRole } from "@/context/RoleContext";
 import { supabase, isSupabasePlaceholder } from "@/utils/supabaseClient";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { PiggyBank, Lock, Mail, ShieldAlert, ArrowRight, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Lock, Mail, ShieldAlert, ArrowRight, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
 function LoginForm() {
   const { setRole, sendPasswordReset } = useRole();
@@ -18,17 +18,28 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Recovery Flows
   const [isForgotMode, setIsForgotMode] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
   const [forgotSuccess, setForgotSuccess] = useState(false);
 
   // Handle callback redirects or reset queries
   useEffect(() => {
     if (searchParams.get("reset") === "true") {
       setIsForgotMode(false);
+      setOtpSent(false);
+      setOtp("");
       setForgotSuccess(false);
       setError("Please update your password inside your settings tab.");
+    } else if (searchParams.get("timeout") === "true") {
+      setIsForgotMode(false);
+      setOtpSent(false);
+      setOtp("");
+      setForgotSuccess(false);
+      setError("Session expired due to inactivity. Please log in again.");
     }
   }, [searchParams]);
 
@@ -42,15 +53,25 @@ function LoginForm() {
     setError("");
     setLoading(true);
 
+    const isTryingAdmin = email.toLowerCase().includes("admin") || email.toLowerCase() === "admin@delmarfarm.com";
+    if (isTryingAdmin && email.toLowerCase() !== "admin@delmarfarm.com") {
+      setError("Access Denied: Single Admin role is restricted to admin@delmarfarm.com.");
+      setLoading(false);
+      return;
+    }
+
+    const targetRole = email.toLowerCase() === "admin@delmarfarm.com" ? "admin" : "customer";
+
     try {
       if (isSupabasePlaceholder) {
         // Direct simulation mode bypass - no fetch call is ever made!
         console.log("Supabase in placeholder mode. Performing local login simulation.");
-        if (email.includes("admin")) {
-          setRole("admin");
+        if (rememberMe) {
+          localStorage.setItem("delmar_remember_me", targetRole);
         } else {
-          setRole("customer");
+          localStorage.removeItem("delmar_remember_me");
         }
+        setRole(targetRole);
         return;
       }
 
@@ -63,6 +84,11 @@ function LoginForm() {
         throw authErr;
       }
 
+      if (rememberMe) {
+        localStorage.setItem("delmar_remember_me", targetRole);
+      } else {
+        localStorage.removeItem("delmar_remember_me");
+      }
       // Success is handled by RoleContext onAuthStateChange listener which triggers redirect
     } catch (err: any) {
       const errMsg = String(err?.message || err || "").toLowerCase();
@@ -73,11 +99,12 @@ function LoginForm() {
         errMsg.includes("cors")
       ) {
         // Graceful fallback to client simulation
-        if (email.includes("admin")) {
-          setRole("admin");
+        if (rememberMe) {
+          localStorage.setItem("delmar_remember_me", targetRole);
         } else {
-          setRole("customer");
+          localStorage.removeItem("delmar_remember_me");
         }
+        setRole(targetRole);
       } else {
         setError(err?.message || String(err) || "Failed to sign in. Please verify your credentials.");
         setLoading(false);
@@ -85,7 +112,7 @@ function LoginForm() {
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
+  const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       setError("Please enter your email address.");
@@ -96,16 +123,97 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const ok = await sendPasswordReset(email);
-      if (ok) {
-        setForgotSuccess(true);
-      } else {
-        throw new Error("Failed to send verification link.");
+      if (isSupabasePlaceholder) {
+        console.log("Supabase placeholder mode: simulating OTP dispatch to", email);
+        setOtpSent(true);
+        return;
       }
+
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+        }
+      });
+
+      if (otpErr) throw otpErr;
+
+      setOtpSent(true);
     } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+      const errMsg = String(err?.message || err || "").toLowerCase();
+      if (
+        errMsg.includes("fetch") || 
+        errMsg.includes("network") || 
+        errMsg.includes("typeerror") || 
+        errMsg.includes("cors")
+      ) {
+        // Fallback simulation if network/CORS issue
+        console.log("Supabase OTP fallback simulation.");
+        setOtpSent(true);
+      } else {
+        setError(err.message || "Failed to send OTP code. Please make sure your account exists.");
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp || otp.length < 6) {
+      setError("Please enter the 6-digit OTP code.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      if (isSupabasePlaceholder) {
+        if (otp === "123456") {
+          if (email.includes("admin")) {
+            setRole("admin");
+          } else {
+            setRole("customer");
+          }
+          return;
+        } else {
+          throw new Error("Invalid OTP code. (Simulation: Enter 123456)");
+        }
+      }
+
+      const { data, error: verifyErr } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: "email",
+      });
+
+      if (verifyErr) throw verifyErr;
+
+      // Logged in successfully! Session is handled by RoleContext onAuthStateChange.
+    } catch (err: any) {
+      const errMsg = String(err?.message || err || "").toLowerCase();
+      if (
+        errMsg.includes("fetch") || 
+        errMsg.includes("network") || 
+        errMsg.includes("typeerror") || 
+        errMsg.includes("cors")
+      ) {
+        // Simulation bypass if network/CORS issue
+        if (otp === "123456") {
+          if (email.includes("admin")) {
+            setRole("admin");
+          } else {
+            setRole("customer");
+          }
+        } else {
+          setError("Invalid OTP code. (Simulation: Enter 123456)");
+          setLoading(false);
+        }
+      } else {
+        setError(err.message || "Invalid OTP code.");
+        setLoading(false);
+      }
     }
   };
 
@@ -115,26 +223,19 @@ function LoginForm() {
         
         {/* Header */}
         <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <div className="bg-primary-600 text-white p-1.5 rounded-lg">
-              <PiggyBank className="w-5 h-5" />
-            </div>
-            <span className="font-heading font-extrabold text-slate-800 text-sm tracking-wide">Delmar Portal</span>
+          <Link href="/" className="inline-flex items-center justify-center">
+            <img 
+              src="/logo.jpg" 
+              alt="Delmar Piggery Farm Logo" 
+              className="h-16 w-auto object-contain"
+            />
           </Link>
           <h2 className="text-2xl font-extrabold font-heading text-slate-800 tracking-tight">
-            {isForgotMode ? "Reset Password" : "Sign In to Your Account"}
+            {isForgotMode ? (otpSent ? "Verify OTP Code" : "Reset Password") : "Sign In to Your Account"}
           </h2>
           <p className="text-xs text-slate-500 font-medium">
-            {isForgotMode ? "We will send an email reset link to your address." : "Manage stock orders and reservation calendars."}
+            {isForgotMode ? (otpSent ? "Please verify the code sent to your Gmail inbox." : "We will send an OTP verification code to your address.") : "Manage stock orders and reservation calendars."}
           </p>
-        </div>
-
-        {/* Info Banner */}
-        <div className="bg-primary-50/50 border border-primary-100 p-3.5 rounded-xl text-[11px] text-primary-800 leading-normal flex gap-2">
-          <ShieldAlert className="w-4 h-4 shrink-0 text-primary-600 mt-0.5" />
-          <span>
-            <strong>Supabase Connected:</strong> Auth calls route directly to your Supabase backend. If credentials are not set up yet, use the quick shortcuts below to simulate portals instantly.
-          </span>
         </div>
 
         {error && (
@@ -143,52 +244,97 @@ function LoginForm() {
           </div>
         )}
 
-        {forgotSuccess && (
-          <div className="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-xs text-emerald-700 font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Reset verification link dispatched to email! Check your inbox.</span>
-          </div>
-        )}
-
         {isForgotMode ? (
           /* Forgot Password Mode */
-          <form onSubmit={handleForgotPassword} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-700 uppercase">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
+          otpSent ? (
+            /* OTP Verification Screen */
+            <form onSubmit={handleVerifyOTP} className="space-y-4">
+              <p className="text-xs text-slate-500 font-medium text-center">
+                Enter the 6-digit verification code sent to <strong>{email}</strong>.
+              </p>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-700 uppercase">One-Time Password (OTP)</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => {
+                      setOtp(e.target.value.replace(/\D/g, ""));
+                      setError("");
+                    }}
+                    className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-primary-500/20 font-bold tracking-widest text-center"
+                    placeholder="123456"
+                  />
+                </div>
+                {isSupabasePlaceholder && (
+                  <span className="text-[10px] text-slate-400 font-semibold block text-center mt-1">
+                    Simulation bypass code: <strong>123456</strong>
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-1/2"
+                  onClick={() => {
+                    setOtpSent(false);
+                    setOtp("");
                     setError("");
                   }}
-                  className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-primary-500/20 font-medium"
-                  placeholder="name@email.com"
-                />
+                  icon={<ArrowLeft className="w-3.5 h-3.5" />}
+                >
+                  Back
+                </Button>
+                <Button type="submit" className="w-1/2" isLoading={loading}>
+                  Verify & Log In
+                </Button>
               </div>
-            </div>
+            </form>
+          ) : (
+            /* Email Request Screen */
+            <form onSubmit={handleSendOTP} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-700 uppercase">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError("");
+                    }}
+                    className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-primary-500/20 font-medium"
+                    placeholder="name@email.com"
+                  />
+                </div>
+              </div>
 
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-1/2"
-                onClick={() => {
-                  setIsForgotMode(false);
-                  setError("");
-                }}
-                icon={<ArrowLeft className="w-3.5 h-3.5" />}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="w-1/2" isLoading={loading}>
-                Send Reset Link
-              </Button>
-            </div>
-          </form>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-1/2"
+                  onClick={() => {
+                    setIsForgotMode(false);
+                    setError("");
+                  }}
+                  icon={<ArrowLeft className="w-3.5 h-3.5" />}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="w-1/2" isLoading={loading}>
+                  Send OTP Code
+                </Button>
+              </div>
+            </form>
+          )
         ) : (
           /* Standard Login Mode */
           <form onSubmit={handleFormLogin} className="space-y-4">
@@ -247,35 +393,23 @@ function LoginForm() {
               </div>
             </div>
 
+            <div className="flex items-center justify-between py-1 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-650 select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-350 accent-primary-600 text-primary-600 focus:ring-primary-500"
+                />
+                Remember Me
+              </label>
+            </div>
+
             <Button type="submit" className="w-full" isLoading={loading}>
               Sign In
             </Button>
           </form>
         )}
-
-        {/* Quick Simulator Buttons */}
-        <div className="space-y-2 pt-2 border-t border-slate-100">
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Quick Sign In Options (Simulator)</span>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs font-semibold hover:border-emerald-500 hover:text-emerald-700"
-              onClick={() => setRole("customer")}
-            >
-              As Customer
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs font-semibold hover:border-red-500 hover:text-red-750"
-              onClick={() => setRole("admin")}
-            >
-              As Admin Owner
-            </Button>
-          </div>
-        </div>
 
         <div className="text-center pt-2">
           <p className="text-xs text-slate-500 font-medium">

@@ -21,7 +21,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 font-sans">
+    <div className="pt-6 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 font-sans">
       
       {/* Title */}
       <div className="text-center max-w-2xl mx-auto space-y-3">
@@ -44,7 +44,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Breeding Station</h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium">Purok 4, Brgy. San Juan, Aliaga, Nueva Ecija, Philippines</p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium">Purok Lapu-Lapu, Tickwas, Dumalinao, Zamboanga del Sur</p>
                 </div>
               </div>
 
@@ -54,7 +54,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Direct Sales & Support</h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium">+63 912 345 6789</p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium">09464544973</p>
                 </div>
               </div>
 
@@ -64,7 +64,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Email Enquiries</h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium">info@delmarpiggery.com</p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium">delmararsenal103@gmail.com</p>
                 </div>
               </div>
 
@@ -81,17 +81,17 @@ export default function ContactPage() {
           </Card>
 
           {/* Simple Map Box */}
-          <div className="bg-primary-950 text-white rounded-3xl p-8 border border-primary-900 flex flex-col justify-between aspect-video relative overflow-hidden shadow-sm">
+          <div className="bg-gradient-to-br from-[#f2faf5] to-[#fcfdfd] text-slate-800 rounded-3xl p-8 border border-primary-100 flex flex-col justify-between aspect-video relative overflow-hidden shadow-sm">
             <div className="absolute inset-0 opacity-10">
               <div className="absolute w-40 h-40 bg-accent-light rounded-full top-2 right-2 blur-2xl" />
             </div>
             <div>
-              <span className="text-[10px] font-bold text-accent-light uppercase tracking-wider block">Interactive Location</span>
-              <h3 className="font-heading text-sm font-bold mt-1">San Juan, Aliaga Location</h3>
+              <span className="text-[10px] font-bold text-primary-700 uppercase tracking-wider block">Interactive Location</span>
+              <h3 className="font-heading text-sm font-bold text-primary-900 mt-1">Dumalinao, Zamboanga del Sur Location</h3>
             </div>
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-350 mt-4">
-              <MapPin className="w-4 h-4 text-accent-light shrink-0" />
-              <span>Nueva Ecija GPS: 15.4851° N, 120.8524° E</span>
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-655 mt-4">
+              <MapPin className="w-4 h-4 text-primary-600 shrink-0" />
+              <span>Zamboanga del Sur GPS: 7.8200° N, 123.3700° E</span>
             </div>
           </div>
         </div>

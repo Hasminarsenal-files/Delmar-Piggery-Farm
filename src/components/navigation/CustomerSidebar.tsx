@@ -11,9 +11,10 @@ import {
   Bell,
   User,
   LogOut,
-  PiggyBank,
   Menu,
   X,
+  PiggyBank,
+  ShieldCheck,
 } from "lucide-react";
 
 export const CustomerSidebar: React.FC = () => {
@@ -27,6 +28,8 @@ export const CustomerSidebar: React.FC = () => {
     { name: "Dashboard", href: "/customer/dashboard", icon: LayoutDashboard },
     { name: "My Orders", href: "/customer/orders", icon: ShoppingBag },
     { name: "My Reservations", href: "/customer/reservations", icon: CalendarCheck },
+    { name: "My Paluwagan", href: "/customer/paluwagan", icon: PiggyBank },
+    { name: "Paluwagan Membership", href: "/customer/paluwagan-membership", icon: ShieldCheck },
     {
       name: "Notifications",
       href: "/customer/notifications",
@@ -42,9 +45,8 @@ export const CustomerSidebar: React.FC = () => {
     <>
       {/* Mobile Top Bar */}
       <div className="md:hidden bg-primary-800 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-        <Link href="/" className="flex items-center gap-2">
-          <PiggyBank className="w-5 h-5 text-accent-light" />
-          <span className="font-heading font-bold text-xs tracking-wide">Delmar Piggery Farm</span>
+        <Link href="/" className="flex items-center bg-white px-2 py-1 rounded-lg">
+          <img src="/logo.jpg" alt="Delmar Piggery Farm Logo" className="h-8 w-auto object-contain" />
         </Link>
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -69,16 +71,11 @@ export const CustomerSidebar: React.FC = () => {
         }`}
       >
         {/* Brand */}
-        <div className="h-20 border-b border-[#e6e8e6] px-6 flex items-center">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="bg-primary-600 text-white p-2 rounded-xl">
-              <PiggyBank className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="font-heading text-xs font-bold text-primary-800 tracking-tight block">DELMAR PIGGERY FARM</span>
-              <span className="text-[9px] font-bold text-accent-light uppercase tracking-wider block">Customer Space</span>
-            </div>
+        <div className="h-20 border-b border-[#e6e8e6] px-6 flex items-center justify-between">
+          <Link href="/" className="flex items-center">
+            <img src="/logo.jpg" alt="Delmar Piggery Farm Logo" className="h-12 w-auto object-contain" />
           </Link>
+          <span className="text-[9px] font-bold text-primary-650 bg-primary-50 px-2 py-0.5 rounded-full uppercase tracking-wider font-sans">Portal</span>
         </div>
 
         {/* User Card */}
@@ -132,10 +129,12 @@ export const CustomerSidebar: React.FC = () => {
               setRole("guest");
               setIsOpen(false);
             }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 cursor-pointer group border border-transparent hover:border-red-100"
           >
-            <LogOut className="w-4 h-4 text-red-400" />
-            <span>Logout</span>
+            <div className="p-1.5 bg-red-50 group-hover:bg-red-100 rounded-lg transition-colors">
+              <LogOut className="w-3.5 h-3.5 text-red-500" />
+            </div>
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>

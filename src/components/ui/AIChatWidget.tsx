@@ -28,7 +28,7 @@ export const AIChatWidget: React.FC = () => {
         {
           id: "welcome",
           sender: "bot",
-          text: `Hello ${userName}! 👋 Welcome to Delmar Piggery Farm support. I am your AI Assistant. How can I help you manage your livestock bookings, orders, or farm inquiries today?`,
+          text: `Hello ${userName}! 👋 Welcome to Savorlicious Food Services. I am your SFS Assistant. How can I help you manage your livestock bookings, track order deliveries, or answer farm questions today?`,
           timestamp: new Date(),
         },
       ]);
@@ -46,6 +46,48 @@ export const AIChatWidget: React.FC = () => {
       setHasNewMessage(true);
     }
   }, [messages.length, isOpen]);
+
+  // Handle external window trigger to open chat widget
+  useEffect(() => {
+    const handleExternalOpen = () => {
+      setIsOpen(true);
+      setHasNewMessage(false);
+    };
+    window.addEventListener("open-chat", handleExternalOpen);
+    return () => window.removeEventListener("open-chat", handleExternalOpen);
+  }, []);
+
+  // 45-second Inactivity Auto-Collapse Timer
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let inactivityTimer: NodeJS.Timeout;
+
+    const resetInactivityTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        setIsOpen(false);
+        setHasNewMessage(true); // show notification dot when auto-collapsed
+      }, 45000); // 45 seconds
+    };
+
+    // Initial trigger
+    resetInactivityTimer();
+
+    // Listen to user interactions inside the window
+    window.addEventListener("mousemove", resetInactivityTimer);
+    window.addEventListener("keydown", resetInactivityTimer);
+    window.addEventListener("scroll", resetInactivityTimer, true);
+    window.addEventListener("click", resetInactivityTimer);
+
+    return () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      window.removeEventListener("mousemove", resetInactivityTimer);
+      window.removeEventListener("keydown", resetInactivityTimer);
+      window.removeEventListener("scroll", resetInactivityTimer, true);
+      window.removeEventListener("click", resetInactivityTimer);
+    };
+  }, [isOpen]);
 
   const handleOpenToggle = () => {
     setIsOpen(!isOpen);
@@ -77,78 +119,88 @@ export const AIChatWidget: React.FC = () => {
       };
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
-    }, 1200);
+    }, 1000);
   };
 
   const generateBotResponse = (userText: string): string => {
     const text = userText.toLowerCase();
 
-    // 1. Context-Aware: Check User Reservations
-    if (text.includes("reservation") || text.includes("booking") || text.includes("res-")) {
+    // 1. Browse Piglets / Livestock inquiries
+    if (text.includes("browse piglets") || text.includes("piglets") || text.includes("livestock")) {
+      return `We raise top-tier Landrace, Duroc, and Large White crossbreeds under strict biosecurity.\n\n• **Regular Weanling Piglets**: ₱3,500/head\n• **Sowlets (Young Females)**: ₱6,500/head\n• **Boarlets (Young Males)**: ₱5,000/head\n• **Fattening Piglets**: ₱200/head\n• **Fattening Hogs**: ₱12,000/head\n\nYou can submit a booking reservation immediately using the dashboard form.`;
+    }
+
+    // 2. Delivery Information & Area inquiries
+    if (text.includes("delivery information") || text.includes("delivery") || text.includes("shipping")) {
+      return `Our farm manages deliveries via specialized bio-secured transit vehicles:\n\n• **Areas Covered**: Central Luzon (Nueva Ecija, Bulacan, Tarlac, and Pampanga).\n• **Meat Shipments**: Packaged in vacuum-sealed chilled coolers to guarantee absolute freshness.`;
+    }
+
+    // 3. Context-Aware: Check User Reservations
+    if (text.includes("reservation") || text.includes("booking") || text.includes("res-") || text.includes("status")) {
       const customerReservations = reservations.filter(
         (r) => r.customerEmail.toLowerCase() === userEmail.toLowerCase()
       );
 
       if (customerReservations.length > 0) {
-        let response = `I found **${customerReservations.length} reservation(s)** under your email (**${userEmail}**):\n\n`;
+        let response = `I located **${customerReservations.length} reservation(s)** registered to **${userEmail}**:\n\n`;
         customerReservations.forEach((r) => {
           response += `• **${r.id}** (${r.category}) — **${r.quantity} head(s)**\n`;
           response += `  Pickup: \`${r.pickupDate}\` | Status: **${r.status}**\n\n`;
         });
-        response += `Is there anything specific you would like to adjust about these bookings?`;
+        response += `Click on any card on your dashboard to see details and countdown timers.`;
         return response;
       } else {
-        return `I checked our booking schedules but couldn't find any reservations under your email (**${userEmail}**). If you would like to book Duroc piglets, fattening pigs, or a crispy lechon catering package, simply click **"+ New Reservation"** at the top of your dashboard!`;
+        return `I checked our database but couldn't locate any active reservations under **${userEmail}**. Click **"New Reservation"** at the top of your dashboard to log a booking.`;
       }
     }
 
-    // 2. Context-Aware: Check User Orders
-    if (text.includes("order") || text.includes("purchase") || text.includes("ord-")) {
+    // 4. Context-Aware: Check User Orders
+    if (text.includes("order") || text.includes("purchase") || text.includes("ord-") || text.includes("track")) {
       const customerOrders = orders.filter(
         (o) => o.customerEmail.toLowerCase() === userEmail.toLowerCase()
       );
 
       if (customerOrders.length > 0) {
-        let response = `Here are your recent orders linked to your profile:\n\n`;
+        let response = `Here are your orders linked to your profile:\n\n`;
         customerOrders.forEach((o) => {
           response += `• **${o.id}** — Total: ₱${o.totalAmount.toLocaleString()}\n`;
-          response += `  Items: *${o.items}*\n`;
-          response += `  Date: \`${o.orderDate}\` | Status: **${o.status}** | Payment: **${o.paymentStatus}**\n\n`;
+          response += `  Product: *${o.product}*\n`;
+          response += `  Date: \`${o.dateCreated}\` | Status: **${o.status}** | Payment: **${o.paymentStatus}**\n\n`;
         });
+        response += `You can track the active status of each order in the Order Dispatch timeline widget!`;
         return response;
       } else {
-        return `I checked our dispatch history but found no recent pork meat orders under your account. To place a custom meat delivery order, please send a list of items to our hotline: **+63 912 345 6789**, or update your profile context.`;
+        return `I checked our dispatch schedules but couldn't find any recent orders linked to **${userEmail}**. Send items to our hotline to place an order: **09464544973**.`;
       }
     }
 
-    // 3. Knowledge Base: Match FAQs
+    // 5. Knowledge Base: Match FAQs
     for (const faq of chatbotFaqs) {
       const questionKeywords = faq.q.toLowerCase().split(" ");
-      // Check if user text contains significant keywords from the FAQ question
       const matchCount = questionKeywords.filter((kw) => kw.length > 3 && text.includes(kw)).length;
       if (matchCount >= 2 || text.includes(faq.q.toLowerCase())) {
         return faq.a;
       }
     }
 
-    // 4. Default Assistant Fallback guided by Guidelines
+    // 6. Basic greetings
     if (text.includes("hello") || text.includes("hi") || text.includes("hey")) {
-      return `Hello! How can I help you with Delmar Piggery Farm products, orders, or reservation services today?`;
+      return `Hello! How can I assist you with Savorlicious Food Services, orders, or bookings today?`;
     }
 
     if (text.includes("price") || text.includes("cost") || text.includes("how much")) {
-      return `Here is our current standard price catalog:\n\n• **Duroc Weanling Piglets**: ₱3,500/head\n• **Fattening Pigs**: ₱12,000/head\n• **Regular Crispy Lechon**: Starting at ₱8,500/set\n• **Catering Packages**: Starting at ₱12,000\n\nYou can book any of these directly via the booking form in your portal!`;
+      return `Our standard price guides:\n\n• **Weanling Piglets**:\n  - Regular: ₱3,500/head\n  - Sowlet: ₱6,500/head\n  - Boarlet: ₱5,000/head\n  - Fattening: ₱200/head\n• **Fattening Hogs**: ₱12,000/head\n• **Crispy Lechon**: From ₱6,500 (15kg) to ₱14,500 (55kg)\n• **Catering Buffets**: Set A (₱250/pax), Set B (₱290/pax), Set C (₱340/pax)\n• **Sweets Packages**: Set A (₱3,650), Set B (₱5,500), Set C (₱7,500)\n\nYou can book any of these directly via the booking form in your portal!`;
     }
 
     // Fallback using the customized guidelines context
-    return `Thank you for your message! As the Delmar Farm Assistant, I want to make sure I answer correctly. \n\nCurrently, I am programmed to:\n*"${chatbotGuidelines}"*\n\nFeel free to ask me to check your orders, verify reservation statuses, or inquire about our premium livestock!`;
+    return `Thank you! As the Delmar Farm Assistant, I am here to help you manage bookings, trace dispatches, and answer inquiries.\n\nCurrently, I am guided by:\n*"${chatbotGuidelines}"*\n\nLet me know if you would like me to lookup your reservations or active orders!`;
   };
 
   const quickPrompts = [
-    { text: "Check my reservation status", icon: Calendar },
-    { text: "Show my order dispatch details", icon: FileText },
-    { text: "What are your delivery areas?", icon: Bot },
-    { text: "What is your return policy?", icon: Sparkles },
+    { text: "Track My Order", icon: FileText },
+    { text: "Browse Piglets", icon: Sparkles },
+    { text: "Reservation Status", icon: Calendar },
+    { text: "Delivery Information", icon: Bot },
   ];
 
   return (
@@ -158,8 +210,8 @@ export const AIChatWidget: React.FC = () => {
         onClick={handleOpenToggle}
         className={`fixed bottom-6 right-6 p-4 rounded-full text-white shadow-2xl transition-all duration-300 z-50 flex items-center justify-center cursor-pointer active:scale-95 group ${
           isOpen
-            ? "bg-red-600 hover:bg-red-700 hover:rotate-90"
-            : "bg-primary-600 hover:bg-primary-700"
+            ? "bg-rose-600 hover:bg-rose-700 hover:rotate-90"
+            : "bg-[#1B4332] hover:bg-[#2D6A4F] text-[#D4AF37] border border-emerald-700/20"
         }`}
         aria-label="Toggle AI Support Assistant"
       >
@@ -167,9 +219,9 @@ export const AIChatWidget: React.FC = () => {
           <X className="w-6 h-6" />
         ) : (
           <div className="relative">
-            <MessageSquare className="w-6 h-6 animate-pulse" />
+            <MessageSquare className="w-6 h-6 animate-pulse text-[#D4AF37]" />
             {hasNewMessage && (
-              <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-accent-light border-2 border-white rounded-full flex items-center justify-center animate-ping" />
+              <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-[#D4AF37] border border-white rounded-full flex items-center justify-center animate-ping" />
             )}
             {!hasNewMessage && (
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border border-white" />
@@ -178,68 +230,68 @@ export const AIChatWidget: React.FC = () => {
         )}
       </button>
 
-      {/* Chat window panel */}
+      {/* Premium Glassmorphic Chat Window */}
       <div
-        className={`fixed bottom-24 right-6 w-[360px] sm:w-[380px] h-[520px] bg-white/98 backdrop-blur-md border border-slate-200/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-50 transform origin-bottom-right ${
+        className={`fixed bottom-24 right-6 w-[360px] sm:w-[385px] h-[540px] bg-[#0D2F22]/95 backdrop-blur-lg border border-emerald-800/40 rounded-3xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-50 transform origin-bottom-right ${
           isOpen
             ? "translate-y-0 opacity-100 scale-100 pointer-events-auto"
             : "translate-y-8 opacity-0 scale-95 pointer-events-none"
         }`}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary-900 to-primary-750 text-white p-4.5 flex items-center justify-between shrink-0 shadow-md">
+        <div className="bg-[#0B3D2E]/80 border-b border-emerald-800/35 text-white p-4.5 flex items-center justify-between shrink-0 shadow-md">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-xl relative">
-              <Bot className="w-5 h-5 text-accent-light" />
-              <span className="absolute bottom-1 right-1 w-2 h-2 bg-emerald-400 rounded-full border border-primary-900 animate-pulse" />
+            <div className="p-2.5 bg-emerald-950/50 rounded-xl relative border border-emerald-800/30">
+              <Bot className="w-5 h-5 text-[#D4AF37]" />
+              <span className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border border-emerald-900 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-xs font-extrabold font-heading tracking-wide">DELMAR SUPPORT AI</h3>
-              <p className="text-[9px] font-bold text-accent-light uppercase tracking-wider">Online Support Assistant</p>
+              <h3 className="text-xs font-extrabold tracking-wider font-sans text-[#D4AF37] uppercase">Delmar Farm Assistant</h3>
+              <p className="text-[8.5px] font-bold text-emerald-300/80 uppercase tracking-widest">Active bio-secure support</p>
             </div>
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="p-1.5 hover:bg-white/15 rounded-lg transition-colors cursor-pointer text-white/80 hover:text-white"
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors cursor-pointer text-white/70 hover:text-white"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Message body */}
-        <div className="flex-grow p-4 overflow-y-auto space-y-4 bg-slate-50/50">
+        <div className="flex-grow p-4.5 overflow-y-auto space-y-4 scrollbar-none bg-[#092017]/60">
           {messages.map((msg) => {
             const isBot = msg.sender === "bot";
             return (
               <div
                 key={msg.id}
-                className={`flex gap-2.5 max-w-[85%] ${
+                className={`flex gap-3 max-w-[85%] ${
                   isBot ? "self-start" : "ml-auto flex-row-reverse"
                 }`}
               >
                 {/* Avatar */}
                 <div
-                  className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center border ${
+                  className={`w-7.5 h-7.5 rounded-xl shrink-0 flex items-center justify-center border ${
                     isBot
-                      ? "bg-primary-50 border-primary-100 text-primary-750"
-                      : "bg-accent-light border-accent-light text-white"
+                      ? "bg-emerald-950/80 border-emerald-800/40 text-[#D4AF37]"
+                      : "bg-[#D4AF37] border-[#D4AF37] text-emerald-950"
                   }`}
                 >
-                  {isBot ? <Bot className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
+                  {isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4 font-bold" />}
                 </div>
 
                 {/* Bubble */}
                 <div className="space-y-1">
                   <div
-                    className={`p-3 rounded-2xl text-[11.5px] leading-relaxed shadow-sm font-sans font-medium ${
+                    className={`p-3.5 rounded-2xl text-[11px] leading-relaxed shadow-sm font-sans font-medium whitespace-pre-line ${
                       isBot
-                        ? "bg-white text-slate-800 rounded-tl-none border border-slate-100 whitespace-pre-line"
-                        : "bg-primary-600 text-white rounded-tr-none font-semibold"
+                        ? "bg-white/10 text-emerald-100 rounded-tl-none border border-emerald-850/40"
+                        : "bg-[#2D6A4F] text-white rounded-tr-none border border-emerald-600/20"
                     }`}
                   >
                     {msg.text}
                   </div>
-                  <span className="text-[8px] text-slate-400 font-bold block px-1 text-right">
+                  <span className="text-[7.5px] text-emerald-450 font-bold block px-1 text-right">
                     {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
@@ -249,22 +301,22 @@ export const AIChatWidget: React.FC = () => {
 
           {/* Typing indicator */}
           {isTyping && (
-            <div className="flex gap-2.5 max-w-[85%] self-start">
-              <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-primary-50 border border-primary-100 text-primary-750">
-                <Bot className="w-3.5 h-3.5" />
+            <div className="flex gap-3 max-w-[85%] self-start">
+              <div className="w-7.5 h-7.5 rounded-xl shrink-0 flex items-center justify-center bg-emerald-950/80 border border-emerald-800/40 text-[#D4AF37]">
+                <Bot className="w-4 h-4" />
               </div>
-              <div className="p-3 bg-white border border-slate-100 rounded-2xl rounded-tl-none flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-75" />
-                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-150" />
-                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-300" />
+              <div className="p-3.5 bg-white/10 border border-emerald-850/40 rounded-2xl rounded-tl-none flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce delay-75" />
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce delay-150" />
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce delay-300" />
               </div>
             </div>
           )}
 
           {/* Suggested FAQ Prompt Chips */}
           {messages.length === 1 && !isTyping && (
-            <div className="pt-2 space-y-2 max-w-[90%]">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block px-1">Suggested inquiries:</p>
+            <div className="pt-2 space-y-2.5 max-w-[90%]">
+              <p className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider block px-1">How can I assist you?</p>
               <div className="flex flex-col gap-2">
                 {quickPrompts.map((prompt, idx) => {
                   const PromptIcon = prompt.icon;
@@ -272,13 +324,13 @@ export const AIChatWidget: React.FC = () => {
                     <button
                       key={idx}
                       onClick={() => handleSendMessage(prompt.text)}
-                      className="w-full text-left text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200/80 px-3.5 py-2.5 rounded-xl transition-all flex items-center justify-between group cursor-pointer"
+                      className="w-full text-left text-[11px] font-bold text-emerald-100 bg-white/5 hover:bg-white/10 border border-emerald-800/30 px-3.5 py-3 rounded-xl transition-all flex items-center justify-between group cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
-                        <PromptIcon className="w-3.5 h-3.5 text-primary-600" />
+                        <PromptIcon className="w-3.5 h-3.5 text-[#D4AF37]" />
                         {prompt.text}
                       </span>
-                      <ArrowRight className="w-3 h-3 text-slate-350 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      <ArrowRight className="w-3.5 h-3.5 text-[#D4AF37] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                     </button>
                   );
                 })}
@@ -295,22 +347,22 @@ export const AIChatWidget: React.FC = () => {
             e.preventDefault();
             handleSendMessage(inputValue);
           }}
-          className="p-3.5 bg-white border-t border-slate-100 flex items-center gap-2 shrink-0"
+          className="p-3.5 bg-[#0B3D2E]/80 border-t border-emerald-800/35 flex items-center gap-2 shrink-0"
         >
           <input
             type="text"
-            placeholder="Type your question..."
+            placeholder="Type your support request..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             disabled={isTyping}
-            className="flex-grow text-xs px-3.5 py-2.5 rounded-xl border border-slate-250 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 font-medium"
+            className="flex-grow text-xs px-3.5 py-2.5 rounded-xl border border-emerald-850/40 bg-white/5 text-white placeholder-emerald-300/40 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 font-medium"
           />
           <button
             type="submit"
             disabled={!inputValue.trim() || isTyping}
-            className="p-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-white rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0"
+            className="p-2.5 bg-[#D4AF37] hover:bg-[#c29d2f] disabled:opacity-40 text-emerald-950 rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0 shadow-md"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-4 h-4 font-bold" />
           </button>
         </form>
       </div>
