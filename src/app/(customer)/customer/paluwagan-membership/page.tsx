@@ -46,19 +46,19 @@ export default function CustomerPaluwaganMembershipPage() {
   const [showForm, setShowForm] = useState(false);
   const [formSuccess, setFormSuccess] = useState(false);
 
-  // Form values
+  // Form values - ONLY prefill Full Name, Email, and Mobile Number from account session
   const [fullName, setFullName] = useState(userName);
   const [birthdate, setBirthdate] = useState("");
   const [age, setAge] = useState<number | "">("");
-  const [civilStatus, setCivilStatus] = useState("Single");
+  const [civilStatus, setCivilStatus] = useState("");
   const [mobileNumber, setMobileNumber] = useState(userPhone);
   const [emailAddress, setEmailAddress] = useState(userEmail);
   
-  // Address
-  const [completeAddress, setCompleteAddress] = useState(userAddress);
-  const [barangay, setBarangay] = useState("Tickwas");
-  const [municipalityCity, setMunicipalityCity] = useState("Dumalinao");
-  const [province, setProvince] = useState("Zamboanga del Sur");
+  // Address - Start empty so user can fill out
+  const [completeAddress, setCompleteAddress] = useState("");
+  const [barangay, setBarangay] = useState("");
+  const [municipalityCity, setMunicipalityCity] = useState("");
+  const [province, setProvince] = useState("");
 
   const handleBirthdateChange = (dateVal: string) => {
     setBirthdate(dateVal);
@@ -73,6 +73,8 @@ export default function CustomerPaluwaganMembershipPage() {
       if (!isNaN(calculatedAge) && calculatedAge >= 0) {
         setAge(calculatedAge);
       }
+    } else {
+      setAge("");
     }
   };
 
@@ -92,13 +94,12 @@ export default function CustomerPaluwaganMembershipPage() {
   const [certifyCorrect, setCertifyCorrect] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
-  // Prefill when form opens or userName/email updates
+  // Sync session props (Name, Email, Mobile ONLY)
   useEffect(() => {
     if (userName) setFullName(userName);
     if (userEmail) setEmailAddress(userEmail);
     if (userPhone) setMobileNumber(userPhone);
-    if (userAddress) setCompleteAddress(userAddress);
-  }, [userName, userEmail, userPhone, userAddress]);
+  }, [userName, userEmail, userPhone]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -293,14 +294,16 @@ export default function CustomerPaluwaganMembershipPage() {
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Civil Status</label>
                       <select
+                        required
                         value={civilStatus}
                         onChange={(e) => setCivilStatus(e.target.value)}
                         className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500/20"
                       >
+                        <option value="">Select Civil Status</option>
                         <option value="Single">Single</option>
                         <option value="Married">Married</option>
-                        <option value="Divorced">Divorced</option>
                         <option value="Widowed">Widowed</option>
+                        <option value="Separated">Separated</option>
                       </select>
                     </div>
                     <div className="space-y-1">
@@ -335,6 +338,7 @@ export default function CustomerPaluwaganMembershipPage() {
                       <input
                         type="text"
                         required
+                        placeholder="e.g. Purok Lapu-Lapu, Tickwas"
                         value={completeAddress}
                         onChange={(e) => setCompleteAddress(e.target.value)}
                         className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500/20"
@@ -345,6 +349,7 @@ export default function CustomerPaluwaganMembershipPage() {
                       <input
                         type="text"
                         required
+                        placeholder="e.g. Tickwas"
                         value={barangay}
                         onChange={(e) => setBarangay(e.target.value)}
                         className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500/20"
@@ -355,6 +360,7 @@ export default function CustomerPaluwaganMembershipPage() {
                       <input
                         type="text"
                         required
+                        placeholder="e.g. Dumalinao"
                         value={municipalityCity}
                         onChange={(e) => setMunicipalityCity(e.target.value)}
                         className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500/20"
@@ -365,6 +371,7 @@ export default function CustomerPaluwaganMembershipPage() {
                       <input
                         type="text"
                         required
+                        placeholder="e.g. Zamboanga del Sur"
                         value={province}
                         onChange={(e) => setProvince(e.target.value)}
                         className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500/20"
