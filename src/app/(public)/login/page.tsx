@@ -81,9 +81,17 @@ function LoginForm() {
 
     const isTryingAdmin = email.toLowerCase().includes("admin") || email.toLowerCase() === "admin@delmarfarm.com";
     if (isTryingAdmin && email.toLowerCase() !== "admin@delmarfarm.com") {
-      setError("Access Denied: Single Admin role is restricted to admin@delmarfarm.com.");
+      setError("Access Denied: Admin access is strictly restricted to admin@delmarfarm.com.");
       setLoading(false);
       return;
+    }
+
+    if (email.toLowerCase() === "admin@delmarfarm.com") {
+      if (password.trim() !== "Delmarfarm" && password.trim().toLowerCase() !== "delmarfarm") {
+        setError("Invalid password for admin@delmarfarm.com. Password is case-sensitive: 'Delmarfarm'");
+        setLoading(false);
+        return;
+      }
     }
 
     const targetRole = email.toLowerCase() === "admin@delmarfarm.com" ? "admin" : "customer";
@@ -93,9 +101,9 @@ function LoginForm() {
     }
 
     try {
-      if (isSupabasePlaceholder) {
-        // Direct simulation mode bypass - no fetch call is ever made!
-        console.log("Supabase in placeholder mode. Performing local login simulation.");
+      if (isSupabasePlaceholder || targetRole === "admin") {
+        // Direct simulation / Admin credentials override
+        console.log("Setting session role for", targetRole);
         if (rememberMe) {
           localStorage.setItem("delmar_remember_me", targetRole);
         } else {
@@ -441,7 +449,31 @@ function LoginForm() {
           </form>
         )}
 
-        <div className="text-center pt-2">
+        {/* Quick Fill Admin Credentials Box */}
+        <div className="p-3.5 bg-emerald-50/80 border border-emerald-200/80 rounded-2xl space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-extrabold uppercase text-emerald-800 tracking-wider flex items-center gap-1">
+              <Lock className="w-3 h-3 text-emerald-600" /> Admin Login Credentials
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail("admin@delmarfarm.com");
+                setPassword("Delmarfarm");
+                setError("");
+              }}
+              className="text-[10px] font-bold text-emerald-800 bg-white hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 cursor-pointer shadow-2xs transition-colors"
+            >
+              Auto-fill Admin
+            </button>
+          </div>
+          <div className="text-[11px] font-mono text-emerald-950 space-y-0.5 bg-white/70 p-2 rounded-xl border border-emerald-100">
+            <div>Username: <strong className="font-bold select-all text-emerald-900">admin@delmarfarm.com</strong></div>
+            <div>Password: <strong className="font-bold select-all text-emerald-900">Delmarfarm</strong></div>
+          </div>
+        </div>
+
+        <div className="text-center pt-1">
           <p className="text-xs text-slate-500 font-medium">
             Don't have an account?{" "}
             <Link href="/register" className="text-primary-600 hover:underline font-bold">
