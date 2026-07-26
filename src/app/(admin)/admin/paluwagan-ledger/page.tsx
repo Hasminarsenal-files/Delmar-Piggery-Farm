@@ -119,7 +119,7 @@ export default function PaluwaganLedgerPage() {
       .filter(o => o.orderType === "Paluwagan")
       .reduce((sum, o) => {
         const schedOverdue = o.paluwaganSchedule
-          ?.filter(i => i.status === "Overdue" || (i.status === "Pending" && new Date(i.dueDate) < new Date()))
+          ?.filter(i => i.status === "OVERDUE" || ((i.status === "UPCOMING" || i.status === "DUE") && new Date(i.dueDate) < new Date()))
           ?.reduce((s, i) => s + (i.amountDue - i.amountPaid), 0) || 0;
         return sum + schedOverdue;
       }, 0);

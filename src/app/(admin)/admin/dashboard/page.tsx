@@ -173,7 +173,7 @@ export default function AdminDashboard() {
       installmentNumber: number;
       dueDate: string;
       amountDue: number;
-      status: "Pending" | "Paid" | "Overdue";
+      status: "UPCOMING" | "DUE" | "PAID" | "PARTIALLY PAID" | "OVERDUE" | "MISSED";
       daysRemaining: number;
     }> = [];
 
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
         const batchObj = paluwaganBatches.find(b => b.id === order.batchId);
         
         order.paluwaganSchedule.forEach(item => {
-          if (item.status === "Pending" || item.status === "Overdue") {
+          if (item.status === "UPCOMING" || item.status === "DUE" || item.status === "OVERDUE") {
             const dueDate = new Date(item.dueDate);
             const timeDiff = dueDate.getTime() - today.getTime();
             const daysRemaining = Math.round(timeDiff / (1000 * 60 * 60 * 24));
@@ -207,8 +207,8 @@ export default function AdminDashboard() {
     });
 
     return list.sort((a, b) => {
-      if (a.status === "Overdue" && b.status !== "Overdue") return -1;
-      if (a.status !== "Overdue" && b.status === "Overdue") return 1;
+      if (a.status === "OVERDUE" && b.status !== "OVERDUE") return -1;
+      if (a.status !== "OVERDUE" && b.status === "OVERDUE") return 1;
       return a.daysRemaining - b.daysRemaining;
     });
   }, [orders, paluwaganBatches]);
@@ -977,7 +977,7 @@ export default function AdminDashboard() {
                   </TableHeader>
                   <TableBody>
                     {paluwaganDuePayments.slice(0, 5).map((pay, idx) => {
-                      const isOverdue = pay.status === "Overdue" || pay.daysRemaining < 0;
+                      const isOverdue = pay.status === "OVERDUE" || pay.daysRemaining < 0;
                       const isToday = pay.daysRemaining === 0;
                       const isTomorrow = pay.daysRemaining === 1;
                       const isTwoDays = pay.daysRemaining === 2;

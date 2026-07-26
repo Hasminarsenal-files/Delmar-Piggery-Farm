@@ -830,8 +830,8 @@ export default function CustomerPaluwaganMembershipPage() {
                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Active Installments Schedule</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {activePlan.paluwaganSchedule?.map((item) => {
-                        const isPaid = item.status === "Paid";
-                        const isOverdue = item.status === "Overdue" || (!isPaid && new Date(item.dueDate) < new Date());
+                        const isPaid = item.status === "PAID";
+                        const isOverdue = item.status === "OVERDUE" || (!isPaid && new Date(item.dueDate) < new Date());
                         const isNext = !isPaid && activePlan.nextDueDate === item.dueDate;
 
                         return (

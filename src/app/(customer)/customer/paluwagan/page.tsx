@@ -18,8 +18,18 @@ import {
   Receipt,
   Mail,
   ChevronRight,
-  Info
+  Info,
+  ShieldAlert,
+  Coins
 } from "lucide-react";
+import {
+  generateFixedBatchSchedule,
+  calculateBatchEndDate,
+  calculateMemberPaluwaganMetrics,
+  calculateEmailReminderDate,
+  formatDateISO,
+  PaluwaganScheduleItem
+} from "@/utils/paluwaganScheduler";
 
 export default function CustomerPaluwaganPage() {
   const { userEmail, orders, paluwaganBatches } = useRole();
@@ -76,14 +86,37 @@ export default function CustomerPaluwaganPage() {
   }
 
   // Find associated batch details
-  const matchedBatch = paluwaganBatches.find((b) => b.id === activePlan?.batchId);
+  const matchedBatch = paluwaganBatches.find((b) => b.id === activePlan?.batchId) || paluwaganBatches[0];
+  const batchStartDate = matchedBatch?.startDate || "2026-07-15";
+  const batchDuration = matchedBatch?.durationMonths || 8;
+  const batchEndDate = matchedBatch?.endDate || calculateBatchEndDate(batchStartDate, batchDuration);
 
-  // Calculations for active/approved plan
-  const totalAmount = activePlan?.totalAmount || 0;
-  const downPayment = activePlan?.downPayment || 0;
-  const schedulePaid = activePlan?.paluwaganSchedule?.reduce((sum, item) => sum + item.amountPaid, 0) || 0;
-  const totalPaid = downPayment + schedulePaid;
-  const remainingBalance = activePlan?.remainingBalance ?? (totalAmount - totalPaid);
+  // Ensure fixed 15th/30th schedule is generated for active plan
+  const schedule: PaluwaganScheduleItem[] = activePlan?.paluwaganSchedule && activePlan.paluwaganSchedule.length > 0
+    ? activePlan.paluwaganSchedule
+    : generateFixedBatchSchedule(
+        batchStartDate,
+        batchDuration,
+        activePlan.totalAmount,
+        activePlan.downPayment || Math.round(activePlan.totalAmount * 0.25)
+      );
+
+  // Compute exact metrics using utility
+  const metrics = calculateMemberPaluwaganMetrics(
+    schedule,
+    activePlan.totalAmount,
+    activePlan.downPayment || Math.round(activePlan.totalAmount * 0.25)
+  );
+
+  const totalAmount = metrics.totalAmountDue;
+  const downPayment = metrics.downPayment;
+  const totalPaid = metrics.totalPaid;
+  const remainingBalance = metrics.remainingBalance;
+  const overdueBalance = metrics.overdueBalance;
+  const paidCount = metrics.paidCount;
+  const overdueCount = metrics.overdueCount;
+  const nextPaymentDate = metrics.nextPaymentDate;
+  const nextPaymentAmount = metrics.nextPaymentAmount;
   const progressPct = Math.round((totalPaid / totalAmount) * 100) || 0;
 
   // Build payment history timeline log
@@ -95,7 +128,6 @@ export default function CustomerPaluwaganPage() {
     type: "Down Payment" | "Installment";
   }> = [];
 
-  // 1. Add downpayment if configured
   if (downPayment > 0 && activePlan) {
     paymentHistory.push({
       receiptNumber: "DPF-DP-INIT",
@@ -106,7 +138,6 @@ export default function CustomerPaluwaganPage() {
     });
   }
 
-  // 2. Add recorded installment logs
   if (activePlan?.installmentsLog) {
     let runningBalance = totalAmount - downPayment;
     activePlan.installmentsLog.forEach((log) => {
@@ -122,35 +153,24 @@ export default function CustomerPaluwaganPage() {
     });
   }
 
-  // Helper to determine status classes for installments
-  const getInstallmentStatus = (dueDateStr: string, status: "Paid" | "Pending" | "Overdue") => {
-    if (status === "Paid") {
-      return { label: "Paid", color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  // Status Styling Badge Helper
+  const getStatusBadge = (status: PaluwaganScheduleItem["status"]) => {
+    switch (status) {
+      case "PAID":
+        return <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">PAID</span>;
+      case "PARTIALLY PAID":
+        return <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-sky-50 text-sky-700 border border-sky-200">PARTIALLY PAID</span>;
+      case "OVERDUE":
+      case "MISSED":
+        return <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">OVERDUE</span>;
+      case "DUE":
+        return <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200 animate-bounce">DUE TODAY</span>;
+      default:
+        return <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-slate-50 text-slate-600 border border-slate-200">UPCOMING</span>;
     }
-    const dueDate = new Date(dueDateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    dueDate.setHours(0, 0, 0, 0);
-
-    if (dueDate < today) {
-      return { label: "Overdue", color: "bg-rose-50 text-rose-700 border-rose-200" };
-    }
-    // Check if it's the next upcoming installment
-    const isNextDue = activePlan?.nextDueDate === dueDateStr;
-    if (isNextDue) {
-      return { label: "Upcoming", color: "bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold" };
-    }
-    return { label: "Pending", color: "bg-slate-50 text-slate-600 border-slate-200" };
   };
 
-  // Determine email reminder text
-  const nextReminderDate = activePlan?.nextDueDate
-    ? (() => {
-        const d = new Date(activePlan.nextDueDate);
-        d.setDate(d.getDate() - 2);
-        return d.toISOString().split("T")[0];
-      })()
-    : null;
+  const nextReminderDate = nextPaymentDate !== "Fully Paid" ? calculateEmailReminderDate(nextPaymentDate) : null;
 
   return (
     <div className="space-y-6 font-sans">
@@ -159,7 +179,7 @@ export default function CustomerPaluwaganPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
           <h1 className="text-xl sm:text-2xl font-extrabold font-heading text-slate-800">My Paluwagan Savings Ledger</h1>
-          <p className="text-xs text-slate-500 font-medium">Monitor your installment schedule, payment history, and contract progress.</p>
+          <p className="text-xs text-slate-500 font-medium">Monitor fixed bi-weekly payment dates (15th & 30th), batch schedules, and catch-up balances.</p>
         </div>
 
         {/* Plan Selector if customer has multiple plans */}
@@ -199,7 +219,7 @@ export default function CustomerPaluwaganPage() {
                 <h3 className="text-base font-extrabold text-slate-800">Paluwagan Application Pending Approval</h3>
                 <p className="text-xs text-slate-500 font-semibold leading-relaxed">
                   Your Paluwagan application for **{activePlan.product}** is currently under admin review. 
-                  Once approved, your ledger will activate automatically and generate the full 4-installment bi-weekly schedule.
+                  Once approved, your ledger will activate automatically and generate the fixed bi-weekly schedule (15th and 30th).
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 max-w-2xl mx-auto text-left text-xs">
@@ -216,8 +236,8 @@ export default function CustomerPaluwaganPage() {
                   <span className="font-extrabold text-slate-800 block">₱{(activePlan.totalAmount * 0.25).toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Payment Interval</span>
-                  <span className="font-extrabold text-[#1B4332] block">Every 15 Days</span>
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Fixed Payment Dates</span>
+                  <span className="font-extrabold text-[#1B4332] block">Every 15th & 30th</span>
                 </div>
               </div>
             </Card>
@@ -242,26 +262,26 @@ export default function CustomerPaluwaganPage() {
                     <TrendingUp className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Paluwagan Batch</span>
+                    <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Assigned Paluwagan Batch</span>
                     <h3 className="text-sm font-extrabold text-slate-800">{matchedBatch?.name || "Active Batch"}</h3>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 pt-2 text-xs border-t border-slate-100">
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Status</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-extrabold uppercase border ${
-                      matchedBatch?.status === "Active" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-50 text-slate-500 border-slate-200"
-                    }`}>
-                      {matchedBatch?.status || "Active"}
-                    </span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Start Date</span>
+                    <span className="font-extrabold text-slate-800 font-mono block">{batchStartDate}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Interval</span>
-                    <span className="font-extrabold text-slate-800 block">Every 15 Days</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Duration</span>
+                    <span className="font-extrabold text-slate-800 block">{batchDuration} Months</span>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Start Date</span>
-                    <span className="font-extrabold text-slate-800 font-mono block">{matchedBatch?.startDate || "N/A"}</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Batch Target End Date</span>
+                    <span className="font-extrabold text-slate-800 font-mono block">{batchEndDate}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Fixed Payment Schedule</span>
+                    <span className="font-extrabold text-[#1B4332] block">Every 15th & 30th of the Month</span>
                   </div>
                 </div>
               </Card>
@@ -272,15 +292,11 @@ export default function CustomerPaluwaganPage() {
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Financial Summary</h4>
                 <div className="grid grid-cols-2 gap-y-4 gap-x-2 pt-1 text-xs">
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Contract Amount</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Total Amount Due</span>
                     <span className="text-sm font-extrabold text-slate-800">₱{totalAmount.toLocaleString()}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Down Payment (25%)</span>
-                    <span className="text-sm font-extrabold text-slate-800">₱{downPayment.toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Total Paid</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Total Amount Paid</span>
                     <span className="text-sm font-extrabold text-emerald-600">₱{totalPaid.toLocaleString()}</span>
                   </div>
                   <div>
@@ -288,23 +304,32 @@ export default function CustomerPaluwaganPage() {
                     <span className="text-sm font-extrabold text-rose-600">₱{remainingBalance.toLocaleString()}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Next Due Date</span>
-                    <span className="text-sm font-extrabold text-amber-600 font-mono">{activePlan.nextDueDate || "Fully Paid"}</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Overdue Balance</span>
+                    <span className={`text-sm font-extrabold ${overdueBalance > 0 ? "text-rose-600 animate-pulse" : "text-slate-700"}`}>
+                      ₱{overdueBalance.toLocaleString()}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Payment Status</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${
-                      remainingBalance <= 0
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}>
-                      {remainingBalance <= 0 ? "Fully Paid" : activePlan.paymentStatus || "Partially Paid"}
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Paid Installments</span>
+                    <span className="text-xs font-extrabold text-emerald-700">{paidCount} / {metrics.syncedSchedule.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Overdue Installments</span>
+                    <span className={`text-xs font-extrabold ${overdueCount > 0 ? "text-rose-600" : "text-slate-700"}`}>
+                      {overdueCount} installment(s)
                     </span>
+                  </div>
+                  <div className="col-span-2 pt-2 border-t border-slate-100">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Next Payment Date & Amount</span>
+                    <div className="flex justify-between items-baseline mt-0.5">
+                      <span className="text-xs font-extrabold text-amber-600 font-mono">{nextPaymentDate}</span>
+                      <span className="text-xs font-extrabold text-slate-800">₱{nextPaymentAmount.toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
               </Card>
 
-              {/* Progress & Visual Percent Card */}
+              {/* Progress Card */}
               <Card className="p-5 bg-white border border-slate-200/60 rounded-3xl space-y-4 shadow-sm">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Progress</span>
@@ -331,11 +356,11 @@ export default function CustomerPaluwaganPage() {
                 <div className="space-y-1">
                   <div className="font-bold text-emerald-800">Automated Billing Alerts</div>
                   <p className="text-[10.5px] text-slate-550 font-semibold leading-relaxed">
-                    An email reminder will be sent automatically 2 days before each due date. 
+                    Automated email reminders are dispatched exactly 2 days before fixed due dates (13th & 28th).
                   </p>
                   {nextReminderDate && (
                     <span className="text-[9.5px] font-extrabold text-[#2D6A4F] bg-emerald-100/50 px-2 py-0.5 rounded-md inline-block">
-                      Next Alert: {nextReminderDate}
+                      Next Alert Date: {nextReminderDate}
                     </span>
                   )}
                 </div>
@@ -343,106 +368,80 @@ export default function CustomerPaluwaganPage() {
 
             </div>
 
-            {/* RIGHT COLUMN: Payment Schedule & History */}
+            {/* RIGHT COLUMN: Payment Schedule Table & History */}
             <div className="lg:col-span-2 space-y-6">
               
-              {/* Payment Schedule */}
-              <div className="space-y-3">
-                <h3 className="font-heading text-xs font-bold text-[#1B4332] uppercase tracking-widest">Installment Due Schedule</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {activePlan.paluwaganSchedule && activePlan.paluwaganSchedule.length > 0 ? (
-                    activePlan.paluwaganSchedule.map((item) => {
-                      const statusConfig = getInstallmentStatus(item.dueDate, item.status);
-                      return (
-                        <Card
-                          key={item.installmentNumber}
-                          className="p-4 bg-white border border-slate-200/60 rounded-2xl relative overflow-hidden flex flex-col justify-between space-y-3 hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="font-extrabold text-[#1B4332] text-xs">Installment #{item.installmentNumber}</span>
-                            <span className={`px-2 py-0.5 rounded-md text-[8.5px] font-extrabold uppercase border ${statusConfig.color}`}>
-                              {statusConfig.label}
-                            </span>
-                          </div>
-
-                          <div className="flex items-baseline justify-between border-t border-slate-100 pt-3">
-                            <div className="space-y-0.5">
-                              <span className="text-[9px] text-slate-400 block uppercase tracking-wider">Amount Due</span>
-                              <span className="text-sm font-extrabold text-slate-800">₱{item.amountDue.toLocaleString()}</span>
-                            </div>
-                            <div className="text-right space-y-0.5">
-                              <span className="text-[9px] text-slate-400 block uppercase tracking-wider">Due Date</span>
-                              <span className="text-xs font-bold text-slate-700 font-mono">{item.dueDate}</span>
-                            </div>
-                          </div>
-
-                          {item.status === "Paid" && (
-                            <div className="text-[9.5px] text-emerald-700 font-bold bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Paid on {item.paymentDate || "N/A"} via {item.collector || "Farm Clerk"} (REC: {item.receiptNumber})</span>
-                            </div>
-                          )}
-                        </Card>
-                      );
-                    })
-                  ) : (
-                    <Card className="col-span-2 p-8 text-center text-xs text-slate-455 border border-slate-200/60">
-                      No schedule installments generated. Contact admin regarding your Paluwagan order.
-                    </Card>
-                  )}
+              {/* Payment Schedule Table */}
+              <Card className="p-5 bg-white border border-slate-200/60 rounded-3xl space-y-4 shadow-sm">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <div className="space-y-0.5">
+                    <h3 className="font-heading text-xs font-bold text-[#1B4332] uppercase tracking-widest">Complete Payment Schedule</h3>
+                    <p className="text-[10.5px] text-slate-450 font-medium">Batch-controlled schedule (15th and 30th fixed dates)</p>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-xl">
+                    {metrics.syncedSchedule.length} Installments
+                  </span>
                 </div>
-              </div>
 
-              {/* Payment History Log */}
-              <div className="space-y-3">
-                <h3 className="font-heading text-xs font-bold text-[#1B4332] uppercase tracking-widest">Collection & Payout History</h3>
-                {paymentHistory.length === 0 ? (
-                  <Card className="p-8 text-center text-xs text-slate-455 border border-slate-200/60">
-                    No transactions registered. Complete down payment or wait for collections to post logs.
-                  </Card>
-                ) : (
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-[10px]">Receipt Number</TableHead>
-                        <TableHead className="text-[10px]">Payment Date</TableHead>
-                        <TableHead className="text-[10px]">Type</TableHead>
-                        <TableHead className="text-[10px] text-right">Amount Paid</TableHead>
-                        <TableHead className="text-[10px] text-right">Remaining Balance</TableHead>
+                        <TableHead>#</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Required Amount</TableHead>
+                        <TableHead>Amount Paid</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paymentHistory.map((row, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell className="font-mono text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                            <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            {row.receiptNumber}
-                          </TableCell>
-                          <TableCell className="text-xs font-semibold text-slate-600 font-mono">{row.date}</TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-extrabold uppercase border ${
-                              row.type === "Down Payment"
-                                ? "bg-blue-50 text-blue-700 border-blue-200"
-                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            }`}>
-                              {row.type}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right text-xs font-extrabold text-slate-800 font-mono">
-                            ₱{row.amountPaid.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right text-xs font-extrabold text-slate-800 font-mono bg-slate-50/50">
-                            ₱{row.remainingBalanceAfter.toLocaleString()}
-                          </TableCell>
+                      {metrics.syncedSchedule.map((item) => (
+                        <TableRow key={item.installmentNumber} className={item.status === "OVERDUE" ? "bg-rose-50/30" : ""}>
+                          <TableCell className="font-bold text-xs text-slate-500">{item.installmentNumber}</TableCell>
+                          <TableCell className="font-mono text-xs font-bold text-slate-800">{item.dueDate}</TableCell>
+                          <TableCell className="font-mono text-xs font-bold text-slate-800">₱{item.amountDue.toLocaleString()}</TableCell>
+                          <TableCell className="font-mono text-xs font-bold text-emerald-600">₱{item.amountPaid.toLocaleString()}</TableCell>
+                          <TableCell>{getStatusBadge(item.status)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+              </Card>
+
+              {/* Recorded Payment History */}
+              <Card className="p-5 bg-white border border-slate-200/60 rounded-3xl space-y-4 shadow-sm">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <h3 className="font-heading text-xs font-bold text-[#1B4332] uppercase tracking-widest">Payment Log & Official Receipts</h3>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">{paymentHistory.length} Transactions</span>
+                </div>
+
+                {paymentHistory.length === 0 ? (
+                  <p className="text-xs text-slate-400 font-medium text-center py-4">No payment transactions recorded yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {paymentHistory.map((history, idx) => (
+                      <div key={idx} className="p-3.5 bg-slate-50/70 border border-slate-100 rounded-2xl flex justify-between items-center text-xs">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-slate-800">{history.type}</span>
+                            <span className="text-[9px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200">
+                              {history.receiptNumber}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-450 font-mono font-semibold">Date: {history.date}</div>
+                        </div>
+                        <div className="text-right space-y-0.5">
+                          <span className="text-sm font-extrabold text-emerald-600 block">+₱{history.amountPaid.toLocaleString()}</span>
+                          <span className="text-[9.5px] text-slate-400 block font-mono">Rem: ₱{history.remainingBalanceAfter.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </div>
+              </Card>
 
             </div>
-
           </motion.div>
         )}
       </AnimatePresence>

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, isSupabasePlaceholder } from "@/utils/supabaseClient";
+import { generateFixedBatchSchedule, calculateBatchEndDate, evaluateInstallmentStatus } from "@/utils/paluwaganScheduler";
 
 export type UserRole = "guest" | "customer" | "admin";
 
@@ -70,7 +71,7 @@ export interface PaluwaganScheduleItem {
   dueDate: string;
   amountDue: number;
   amountPaid: number;
-  status: "Pending" | "Paid" | "Overdue";
+  status: "UPCOMING" | "DUE" | "PAID" | "PARTIALLY PAID" | "OVERDUE" | "MISSED";
   paymentDate?: string;
   receiptNumber?: string;
   collector?: string;
@@ -81,8 +82,10 @@ export interface PaluwaganBatch {
   id: string;
   name: string;
   startDate: string;
+  durationMonths: 8 | 12;
   endDate: string;
   status: "Active" | "Archived" | "Completed";
+  createdAt?: string;
 }
 
 export interface Order {
@@ -416,10 +419,10 @@ const initialOrders: Order[] = [
     nextDueDate: "2026-07-16",
     batchId: "pb1",
     paluwaganSchedule: [
-      { installmentNumber: 1, dueDate: "2026-06-16", amountDue: 2500, amountPaid: 2500, status: "Paid", paymentDate: "2026-06-16", receiptNumber: "REC-301", collector: "Elena Delmar", remarks: "Installment 1 check" },
-      { installmentNumber: 2, dueDate: "2026-07-01", amountDue: 2500, amountPaid: 2500, status: "Paid", paymentDate: "2026-07-01", receiptNumber: "REC-302", collector: "Elena Delmar", remarks: "Installment 2 check" },
-      { installmentNumber: 3, dueDate: "2026-07-16", amountDue: 2500, amountPaid: 0, status: "Pending" },
-      { installmentNumber: 4, dueDate: "2026-08-01", amountDue: 2500, amountPaid: 0, status: "Pending" }
+      { installmentNumber: 1, dueDate: "2026-06-16", amountDue: 2500, amountPaid: 2500, status: "PAID", paymentDate: "2026-06-16", receiptNumber: "REC-301", collector: "Elena Delmar", remarks: "Installment 1 check" },
+      { installmentNumber: 2, dueDate: "2026-07-01", amountDue: 2500, amountPaid: 2500, status: "PAID", paymentDate: "2026-07-01", receiptNumber: "REC-302", collector: "Elena Delmar", remarks: "Installment 2 check" },
+      { installmentNumber: 3, dueDate: "2026-07-16", amountDue: 2500, amountPaid: 0, status: "UPCOMING" },
+      { installmentNumber: 4, dueDate: "2026-08-01", amountDue: 2500, amountPaid: 0, status: "UPCOMING" }
     ],
     installmentsLog: [
       { date: "2026-06-01", amount: 2500, remarks: "Down Payment" },
@@ -448,10 +451,10 @@ const initialOrders: Order[] = [
     nextDueDate: "2026-07-16",
     batchId: "pb1",
     paluwaganSchedule: [
-      { installmentNumber: 1, dueDate: "2026-06-16", amountDue: 2000, amountPaid: 0, status: "Overdue" },
-      { installmentNumber: 2, dueDate: "2026-07-01", amountDue: 2000, amountPaid: 0, status: "Overdue" },
-      { installmentNumber: 3, dueDate: "2026-07-16", amountDue: 2000, amountPaid: 0, status: "Pending" },
-      { installmentNumber: 4, dueDate: "2026-08-01", amountDue: 2000, amountPaid: 0, status: "Pending" }
+      { installmentNumber: 1, dueDate: "2026-06-16", amountDue: 2000, amountPaid: 0, status: "OVERDUE" },
+      { installmentNumber: 2, dueDate: "2026-07-01", amountDue: 2000, amountPaid: 0, status: "OVERDUE" },
+      { installmentNumber: 3, dueDate: "2026-07-16", amountDue: 2000, amountPaid: 0, status: "UPCOMING" },
+      { installmentNumber: 4, dueDate: "2026-08-01", amountDue: 2000, amountPaid: 0, status: "UPCOMING" }
     ],
     installmentsLog: [
       { date: "2026-06-01", amount: 2500, remarks: "Down Payment" }
@@ -478,10 +481,10 @@ const initialOrders: Order[] = [
     nextDueDate: "2026-07-16",
     batchId: "pb2",
     paluwaganSchedule: [
-      { installmentNumber: 1, dueDate: "2026-07-16", amountDue: 1500, amountPaid: 0, status: "Pending" },
-      { installmentNumber: 2, dueDate: "2026-08-01", amountDue: 1500, amountPaid: 0, status: "Pending" },
-      { installmentNumber: 3, dueDate: "2026-08-16", amountDue: 1500, amountPaid: 0, status: "Pending" },
-      { installmentNumber: 4, dueDate: "2026-08-31", amountDue: 1500, amountPaid: 0, status: "Pending" }
+      { installmentNumber: 1, dueDate: "2026-07-16", amountDue: 1500, amountPaid: 0, status: "UPCOMING" },
+      { installmentNumber: 2, dueDate: "2026-08-01", amountDue: 1500, amountPaid: 0, status: "UPCOMING" },
+      { installmentNumber: 3, dueDate: "2026-08-16", amountDue: 1500, amountPaid: 0, status: "UPCOMING" },
+      { installmentNumber: 4, dueDate: "2026-08-31", amountDue: 1500, amountPaid: 0, status: "UPCOMING" }
     ],
     installmentsLog: [
       { date: "2026-07-01", amount: 2700, remarks: "Down Payment" }
@@ -490,9 +493,9 @@ const initialOrders: Order[] = [
 ];
 
 const initialPaluwaganBatches: PaluwaganBatch[] = [
-  { id: "pb1", name: "Batch 1", startDate: "2026-06-01", endDate: "2026-09-01", status: "Active" },
-  { id: "pb2", name: "Batch 2", startDate: "2026-07-01", endDate: "2026-10-01", status: "Active" },
-  { id: "pb3", name: "Batch 3", startDate: "2026-08-01", endDate: "2026-11-01", status: "Active" }
+  { id: "pb1", name: "Batch 1", startDate: "2026-07-15", durationMonths: 8, endDate: "2027-02-28", status: "Active" },
+  { id: "pb2", name: "Batch 2", startDate: "2026-09-15", durationMonths: 8, endDate: "2027-04-30", status: "Active" },
+  { id: "pb3", name: "Batch 3", startDate: "2026-11-15", durationMonths: 12, endDate: "2027-11-30", status: "Active" }
 ];
 
 const initialNotifications: Notification[] = [
@@ -1902,28 +1905,15 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
           let nextDueDate = o.nextDueDate;
 
           if (nextStatus === "Approved" && o.orderType === "Paluwagan" && !schedule) {
-            const rem = o.totalAmount - (o.downPayment || 0);
-            const instAmt = o.installmentAmount || 1000;
-            const numPayments = Math.ceil(rem / instAmt);
-            const generated: PaluwaganScheduleItem[] = [];
-            const baseDate = new Date(o.dateCreated || new Date().toISOString().split("T")[0]);
-
-            for (let i = 1; i <= numPayments; i++) {
-              const dueDate = new Date(baseDate);
-              dueDate.setDate(baseDate.getDate() + 15 * i);
-              const dueDateStr = dueDate.toISOString().split("T")[0];
-
-              generated.push({
-                installmentNumber: i,
-                dueDate: dueDateStr,
-                amountDue: i === numPayments ? (rem - (instAmt * (numPayments - 1))) : instAmt,
-                amountPaid: 0,
-                status: "Pending",
-              });
-            }
+            const down = o.downPayment || Math.round(o.totalAmount * 0.25);
+            const batchObj = paluwaganBatches.find(b => b.id === o.batchId);
+            const bStart = batchObj?.startDate || o.dateCreated || new Date().toISOString().split("T")[0];
+            const bDur = batchObj?.durationMonths || 8;
+            
+            const generated = generateFixedBatchSchedule(bStart, bDur, o.totalAmount, down);
             schedule = generated;
-            remBal = rem;
-            nextDueDate = generated[0]?.dueDate;
+            remBal = Math.max(0, o.totalAmount - down);
+            nextDueDate = generated.find(i => i.status === "UPCOMING" || i.status === "DUE" || i.status === "OVERDUE")?.dueDate;
           }
 
           return {
@@ -1969,28 +1959,15 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
           let nextDueDate = o.nextDueDate;
 
           if (nextStatus === "Approved" && o.orderType === "Paluwagan" && !schedule) {
-            const rem = o.totalAmount - (o.downPayment || 0);
-            const instAmt = o.installmentAmount || 1000;
-            const numPayments = Math.ceil(rem / instAmt);
-            const generated: PaluwaganScheduleItem[] = [];
-            const baseDate = new Date(o.dateCreated || new Date().toISOString().split("T")[0]);
-
-            for (let i = 1; i <= numPayments; i++) {
-              const dueDate = new Date(baseDate);
-              dueDate.setDate(baseDate.getDate() + 15 * i);
-              const dueDateStr = dueDate.toISOString().split("T")[0];
-
-              generated.push({
-                installmentNumber: i,
-                dueDate: dueDateStr,
-                amountDue: i === numPayments ? (rem - (instAmt * (numPayments - 1))) : instAmt,
-                amountPaid: 0,
-                status: "Pending",
-              });
-            }
-            schedule = generated;
-            remBal = rem;
-            nextDueDate = generated[0]?.dueDate;
+            const matchedBatch = paluwaganBatches.find(b => b.id === o.batchId) || paluwaganBatches[0];
+            const bStart = matchedBatch?.startDate || "2026-07-15";
+            const bDuration = matchedBatch?.durationMonths || 8;
+            const down = o.downPayment || Math.round(o.totalAmount * 0.25);
+            
+            schedule = generateFixedBatchSchedule(bStart, bDuration, o.totalAmount, down);
+            remBal = Math.max(0, o.totalAmount - down);
+            const nextItem = schedule.find(i => i.status === "UPCOMING" || i.status === "DUE" || i.status === "OVERDUE");
+            nextDueDate = nextItem ? nextItem.dueDate : undefined;
           }
 
           return {
@@ -2521,9 +2498,13 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addPaluwaganBatch = async (batch: Omit<PaluwaganBatch, "id" | "status">): Promise<boolean> => {
+  const addPaluwaganBatch = async (batch: Omit<PaluwaganBatch, "id" | "status" | "endDate"> & { durationMonths?: 8 | 12; endDate?: string }): Promise<boolean> => {
+    const durationMonths = batch.durationMonths || 8;
+    const endDate = batch.endDate || calculateBatchEndDate(batch.startDate, durationMonths);
     const newBatch: PaluwaganBatch = {
       ...batch,
+      durationMonths,
+      endDate,
       id: `pb-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       status: "Active"
     };
@@ -2532,7 +2513,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (typeof window !== "undefined") {
       localStorage.setItem("savorlicious_paluwagan_batches", JSON.stringify(updated));
     }
-    await logAction("CREATE_PALUWAGAN_BATCH", `Created Paluwagan Batch "${newBatch.name}" starting ${newBatch.startDate}`);
+    await logAction("CREATE_PALUWAGAN_BATCH", `Created Paluwagan Batch "${newBatch.name}" starting ${newBatch.startDate} (${durationMonths} Months, End: ${endDate})`);
     return true;
   };
 
@@ -2564,7 +2545,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return {
               ...item,
               amountPaid: payment.amountPaid,
-              status: "Paid" as const,
+              status: "PAID" as const,
               paymentDate: payment.paymentDate,
               receiptNumber: payment.receiptNumber,
               collector: payment.collector,
@@ -2589,7 +2570,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const updatedLogs = [...(o.installmentsLog || []), newInstallmentLog];
 
         // Find next due date
-        const nextDueItem = updatedSchedule.find(i => i.status === "Pending" || i.status === "Overdue");
+        const nextDueItem = updatedSchedule.find(i => i.status === "UPCOMING" || i.status === "DUE" || i.status === "OVERDUE");
         const nextDue = nextDueItem ? nextDueItem.dueDate : undefined;
 
         // Payment status transition
@@ -2815,7 +2796,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const schedPaid = updatedSchedule?.reduce((sum, item) => sum + item.amountPaid, 0) || 0;
         const totalPaidVal = downPayment + schedPaid;
         const remainingVal = Math.max(0, o.totalAmount - totalPaidVal);
-        const nextDueItem = updatedSchedule?.find(item => item.status === "Pending");
+        const nextDueItem = updatedSchedule?.find(item => item.status === "UPCOMING" || item.status === "DUE" || item.status === "OVERDUE");
         const nextDueStr = nextDueItem ? nextDueItem.dueDate : undefined;
 
         const payStatus = remainingVal <= 0 ? ("Paid" as const) : ("Partially Paid" as const);
@@ -2905,7 +2886,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return {
                   ...item,
                   amountPaid: 0,
-                  status: "Pending" as const,
+                  status: "UPCOMING" as const,
                   paymentDate: "",
                   receiptNumber: "",
                   collector: "",
@@ -2919,7 +2900,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const schedPaid = updatedSchedule?.reduce((sum, item) => sum + item.amountPaid, 0) || 0;
           const totalPaidVal = downPayment + schedPaid;
           const remainingVal = Math.max(0, o.totalAmount - totalPaidVal);
-          const nextDueItem = updatedSchedule?.find(item => item.status === "Pending");
+          const nextDueItem = updatedSchedule?.find(item => item.status === "UPCOMING" || item.status === "DUE" || item.status === "OVERDUE");
           const nextDueStr = nextDueItem ? nextDueItem.dueDate : undefined;
 
           const updatedLogs = o.installmentsLog?.filter(log => !log.remarks?.includes(voidedEntry.receiptNumber)) || [];
@@ -3023,7 +3004,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const schedPaid = updatedSchedule?.reduce((sum, item) => sum + item.amountPaid, 0) || 0;
           const totalPaidVal = downPayment + schedPaid;
           const remainingVal = Math.max(0, o.totalAmount - totalPaidVal);
-          const nextDueItem = updatedSchedule?.find(item => item.status === "Pending");
+          const nextDueItem = updatedSchedule?.find(item => item.status === "UPCOMING" || item.status === "DUE" || item.status === "OVERDUE");
           const nextDueStr = nextDueItem ? nextDueItem.dueDate : undefined;
 
           const updatedLogs = o.installmentsLog?.map(log => {
@@ -3088,17 +3069,17 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const updatedSchedule = order.paluwaganSchedule.map(item => {
           const dueDate = new Date(item.dueDate);
 
-          // 1. Mark Overdue if past due and status is Pending
-          if (item.status === "Pending" && dueDate < today) {
+          // 1. Mark Overdue if past due and status is UPCOMING or DUE
+          if ((item.status === "UPCOMING" || item.status === "DUE") && dueDate < today) {
             orderChanged = true;
             hasChanges = true;
-            return { ...item, status: "Overdue" as const };
+            return { ...item, status: "OVERDUE" as const };
           }
 
           // 2. Dispatch reminder exactly 2 days before
           const timeDiff = dueDate.getTime() - today.getTime();
           const daysDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
-          if (item.status === "Pending" && daysDiff === 2 && !item.remarks?.includes("Reminder Sent")) {
+          if ((item.status === "UPCOMING" || item.status === "DUE") && daysDiff === 2 && !item.remarks?.includes("Reminder Sent")) {
             orderChanged = true;
             hasChanges = true;
 
@@ -3119,8 +3100,8 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         if (orderChanged) {
-          const hasOverdue = updatedSchedule.some(i => i.status === "Overdue");
-          const nextDueItem = updatedSchedule.find(i => i.status === "Pending" || i.status === "Overdue");
+          const hasOverdue = updatedSchedule.some(i => i.status === "OVERDUE");
+          const nextDueItem = updatedSchedule.find(i => i.status === "UPCOMING" || i.status === "DUE" || i.status === "OVERDUE");
           
           return {
             ...order,

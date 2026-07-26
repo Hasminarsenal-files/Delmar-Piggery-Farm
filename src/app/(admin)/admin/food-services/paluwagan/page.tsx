@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useRole, Order, PaluwaganBatch, PaluwaganScheduleItem } from "@/context/RoleContext";
+import { generateFixedBatchSchedule, calculateBatchEndDate, calculateMemberPaluwaganMetrics } from "@/utils/paluwaganScheduler";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
@@ -55,11 +56,17 @@ export default function PaluwaganManagementPage() {
   
   const [successMsg, setSuccessMsg] = useState("");
 
-  // Add Batch Form
-  const [newBatchForm, setNewBatchForm] = useState({
+  // Add Batch Form (Requirements #2 & #3 & #11)
+  const [newBatchForm, setNewBatchForm] = useState<{
+    name: string;
+    startDate: string;
+    durationMonths: 8 | 12;
+    endDate: string;
+  }>({
     name: "",
-    startDate: "",
-    endDate: ""
+    startDate: "2026-07-15",
+    durationMonths: 8,
+    endDate: "2027-02-28"
   });
 
   // Add Member to Batch Form
@@ -82,7 +89,7 @@ export default function PaluwaganManagementPage() {
     return orders.filter(o => o.orderType === "Paluwagan");
   }, [orders]);
 
-  // Compute stats for batches
+  // Compute stats for batches (Requirement #10)
   const batchStats = useMemo(() => {
     return paluwaganBatches.map(batch => {
       const batchMembers = paluwaganOrders.filter(o => o.batchId === batch.id);
@@ -93,12 +100,31 @@ export default function PaluwaganManagementPage() {
       }, 0);
       const outstanding = Math.max(0, totalExpected - totalCollected);
 
+      let overdueAmount = 0;
+      let overdueMembersCount = 0;
+
+      batchMembers.forEach(m => {
+        const metrics = calculateMemberPaluwaganMetrics(
+          m.paluwaganSchedule || [],
+          m.totalAmount,
+          m.downPayment || Math.round(m.totalAmount * 0.25)
+        );
+        overdueAmount += metrics.overdueBalance;
+        if (metrics.overdueCount > 0) {
+          overdueMembersCount++;
+        }
+      });
+
       return {
         ...batch,
+        durationMonths: batch.durationMonths || 8,
+        endDate: batch.endDate || calculateBatchEndDate(batch.startDate, batch.durationMonths || 8),
         memberCount: batchMembers.length,
         totalExpected,
         totalCollected,
-        outstanding
+        outstanding,
+        overdueAmount,
+        overdueMembersCount
       };
     });
   }, [paluwaganBatches, paluwaganOrders]);
@@ -117,7 +143,7 @@ export default function PaluwaganManagementPage() {
     const outstandingBalancesSum = Math.max(0, totalExpectedSum - totalCollectedSum);
     const fullyPaidMembersCount = paluwaganOrders.filter(o => o.remainingBalance === 0).length;
     const overdueMembersCount = paluwaganOrders.filter(o => 
-      o.paluwaganSchedule?.some(item => item.status === "Overdue")
+      o.paluwaganSchedule?.some(item => item.status === "OVERDUE")
     ).length;
 
     return {
@@ -138,7 +164,7 @@ export default function PaluwaganManagementPage() {
       
       const matchesBatch = batchFilter === "All" || o.batchId === batchFilter;
       
-      const hasOverdue = o.paluwaganSchedule?.some(item => item.status === "Overdue");
+      const hasOverdue = o.paluwaganSchedule?.some(item => item.status === "OVERDUE");
       const isPaid = o.remainingBalance === 0;
 
       let matchesStatus = true;
@@ -158,12 +184,14 @@ export default function PaluwaganManagementPage() {
   // Handlers
   const handleAddBatchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBatchForm.name || !newBatchForm.startDate || !newBatchForm.endDate) return;
+    if (!newBatchForm.name || !newBatchForm.startDate) return;
+    const computedEnd = calculateBatchEndDate(newBatchForm.startDate, newBatchForm.durationMonths);
 
     const ok = await addPaluwaganBatch({
       name: newBatchForm.name,
       startDate: newBatchForm.startDate,
-      endDate: newBatchForm.endDate
+      durationMonths: newBatchForm.durationMonths,
+      endDate: computedEnd
     });
 
     if (ok) {
@@ -171,7 +199,7 @@ export default function PaluwaganManagementPage() {
       setTimeout(() => {
         setSuccessMsg("");
         setIsAddBatchOpen(false);
-        setNewBatchForm({ name: "", startDate: "", endDate: "" });
+        setNewBatchForm({ name: "", startDate: "2026-07-15", durationMonths: 8, endDate: "2027-02-28" });
       }, 1500);
     }
   };
@@ -180,52 +208,34 @@ export default function PaluwaganManagementPage() {
     e.preventDefault();
     if (!selectedBatch || !selectedOrderToLink) return;
 
-    // Update order with batch ID
     const orderToLink = orders.find(o => o.id === selectedOrderToLink);
     if (!orderToLink) return;
 
-    // Transition state and assign batch
     const orderIndex = orders.findIndex(o => o.id === selectedOrderToLink);
     if (orderIndex !== -1) {
+      const bStart = selectedBatch.startDate;
+      const bDuration = selectedBatch.durationMonths || 8;
+      const down = orderToLink.downPayment || Math.round(orderToLink.totalAmount * 0.25);
+      const generated = generateFixedBatchSchedule(bStart, bDuration, orderToLink.totalAmount, down);
+
       orders[orderIndex] = {
         ...orderToLink,
         batchId: selectedBatch.id,
-        status: "Approved" // Approve order to trigger automated schedule calculation
+        status: "Approved",
+        downPayment: down,
+        paluwaganSchedule: generated,
+        remainingBalance: Math.max(0, orderToLink.totalAmount - down),
+        nextDueDate: generated.find(i => i.status === "UPCOMING" || i.status === "DUE" || i.status === "OVERDUE")?.dueDate
       };
-      
-      // Force schedule refresh
-      const rem = orderToLink.totalAmount - (orderToLink.downPayment || 0);
-      const instAmt = orderToLink.installmentAmount || 1000;
-      const numPayments = Math.ceil(rem / instAmt);
-      const generated: PaluwaganScheduleItem[] = [];
-      const baseDate = new Date(selectedBatch.startDate);
-
-      for (let i = 1; i <= numPayments; i++) {
-        const dueDate = new Date(baseDate);
-        dueDate.setDate(baseDate.getDate() + 15 * i);
-        const dueDateStr = dueDate.toISOString().split("T")[0];
-
-        generated.push({
-          installmentNumber: i,
-          dueDate: dueDateStr,
-          amountDue: i === numPayments ? (rem - (instAmt * (numPayments - 1))) : instAmt,
-          amountPaid: 0,
-          status: "Pending"
-        });
-      }
-
-      orders[orderIndex].paluwaganSchedule = generated;
-      orders[orderIndex].remainingBalance = rem;
-      orders[orderIndex].nextDueDate = generated[0]?.dueDate;
     }
 
-    setSuccessMsg("Member cohort linked to batch successfully!");
     // Sync UI selection
     const updatedOrder = orders.find(o => o.id === selectedOrderToLink);
     if (updatedOrder) {
       setSelectedMemberOrder(updatedOrder);
     }
 
+    setSuccessMsg("Member linked to batch and payment schedule generated!");
     setTimeout(() => {
       setSuccessMsg("");
       setIsAddMemberOpen(false);
@@ -301,7 +311,7 @@ export default function PaluwaganManagementPage() {
     const rows = paluwaganOrders.map(o => {
       const batchName = paluwaganBatches.find(b => b.id === o.batchId)?.name || "Unlinked";
       const totalPaid = o.totalAmount - (o.remainingBalance || 0);
-      const hasOverdue = o.paluwaganSchedule?.some(i => i.status === "Overdue");
+      const hasOverdue = o.paluwaganSchedule?.some(i => i.status === "OVERDUE");
       const status = o.remainingBalance === 0 ? "Fully Paid" : hasOverdue ? "Overdue" : "Paying";
       
       return [
@@ -424,7 +434,7 @@ export default function PaluwaganManagementPage() {
                 whileHover={{ y: -3 }}
                 onClick={() => setSelectedBatch(batch)}
                 key={batch.id} 
-                className={`p-5 rounded-2xl border transition-all cursor-pointer text-xs relative overflow-hidden flex flex-col justify-between h-48 ${
+                className={`p-5 rounded-2xl border transition-all cursor-pointer text-xs relative overflow-hidden flex flex-col justify-between space-y-3 ${
                   isSelected 
                     ? "bg-[#1B4332] text-white border-[#1B4332] shadow-md" 
                     : "bg-white dark:bg-[#0f1412] border-slate-150 hover:border-emerald-300 dark:border-[#182620] hover:shadow-sm"
@@ -435,7 +445,7 @@ export default function PaluwaganManagementPage() {
                   isSelected ? "bg-[#D4AF37]" : "bg-emerald-600"
                 }`} />
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <div className="flex justify-between items-center">
                     <h4 className="font-extrabold text-sm uppercase tracking-wide">{batch.name}</h4>
                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase ${
@@ -443,27 +453,43 @@ export default function PaluwaganManagementPage() {
                         ? "bg-white/20 text-[#D4AF37]" 
                         : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-450"
                     }`}>
-                      {batch.status}
+                      {batch.durationMonths} Months ({batch.status})
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-450 dark:text-slate-400">
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>{batch.startDate} — {batch.endDate}</span>
+                    <span>Start: {batch.startDate} | End: {batch.endDate}</span>
                   </div>
                 </div>
 
-                <div className="space-y-2 py-2">
-                  <div className="flex justify-between font-bold text-[10px]">
-                    <span className={isSelected ? "text-white/80" : "text-slate-500"}>Expected:</span>
-                    <span>₱{batch.totalExpected.toLocaleString()}</span>
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100/50 text-[10px]">
+                  <div>
+                    <span className={isSelected ? "text-white/70" : "text-slate-400 block"}>Total Members:</span>
+                    <span className="font-extrabold">{batch.memberCount} Members</span>
                   </div>
-                  <div className="flex justify-between font-bold text-[10px]">
-                    <span className={isSelected ? "text-white/80" : "text-slate-500"}>Collected:</span>
-                    <span className={isSelected ? "text-emerald-300" : "text-emerald-700"}>₱{batch.totalCollected.toLocaleString()}</span>
+                  <div>
+                    <span className={isSelected ? "text-white/70" : "text-slate-400 block"}>Expected:</span>
+                    <span className="font-extrabold">₱{batch.totalExpected.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className={isSelected ? "text-white/70" : "text-slate-400 block"}>Collected:</span>
+                    <span className={`font-extrabold ${isSelected ? "text-emerald-300" : "text-emerald-700"}`}>₱{batch.totalCollected.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className={isSelected ? "text-white/70" : "text-slate-400 block"}>Outstanding:</span>
+                    <span className={`font-extrabold ${batch.outstanding > 0 ? (isSelected ? "text-rose-300" : "text-rose-600") : ""}`}>₱{batch.outstanding.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className={isSelected ? "text-white/70" : "text-slate-400 block"}>Overdue Amount:</span>
+                    <span className={`font-extrabold ${batch.overdueAmount > 0 ? "text-rose-500 animate-pulse" : ""}`}>₱{batch.overdueAmount.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className={isSelected ? "text-white/70" : "text-slate-400 block"}>Overdue Members:</span>
+                    <span className={`font-extrabold ${batch.overdueMembersCount > 0 ? "text-rose-500 font-bold" : ""}`}>{batch.overdueMembersCount} Member(s)</span>
                   </div>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 pt-1">
                   <div className="flex justify-between text-[9px] font-extrabold uppercase">
                     <span className={isSelected ? "text-white/70" : "text-slate-400"}>Collection Coverage</span>
                     <span>{progress}%</span>
@@ -471,7 +497,6 @@ export default function PaluwaganManagementPage() {
                   <div className="w-full h-1.5 bg-slate-100 dark:bg-emerald-955/20 rounded-full overflow-hidden">
                     <div className="h-full bg-emerald-600" style={{ width: `${progress}%`, backgroundColor: isSelected ? "#D4AF37" : "#059669" }} />
                   </div>
-                  <span className="text-[9.5px] font-extrabold block text-right pt-0.5">{batch.memberCount} Members enrolled</span>
                 </div>
               </motion.div>
             );
@@ -530,7 +555,7 @@ export default function PaluwaganManagementPage() {
                   {filteredMembers.filter(m => m.batchId === selectedBatch.id).map((member) => {
                     const totalPaid = member.totalAmount - (member.remainingBalance || 0);
                     const progress = Math.round((totalPaid / member.totalAmount) * 100);
-                    const hasOverdue = member.paluwaganSchedule?.some(i => i.status === "Overdue");
+                    const hasOverdue = member.paluwaganSchedule?.some(i => i.status === "OVERDUE");
                     const isFullyPaid = member.remainingBalance === 0;
 
                     return (
@@ -614,12 +639,12 @@ export default function PaluwaganManagementPage() {
                 const totalPaid = selectedMemberOrder.totalAmount - (selectedMemberOrder.remainingBalance || 0);
                 const progressPct = Math.round((totalPaid / selectedMemberOrder.totalAmount) * 100);
                 
-                const numPaymentsMade = selectedMemberOrder.paluwaganSchedule?.filter(i => i.status === "Paid").length || 0;
+                const numPaymentsMade = selectedMemberOrder.paluwaganSchedule?.filter(i => i.status === "PAID").length || 0;
                 const remInstallments = (selectedMemberOrder.paluwaganSchedule?.length || 4) - numPaymentsMade;
 
                 // Last payment details
                 const lastPayment = selectedMemberOrder.paluwaganSchedule
-                  ?.filter(i => i.status === "Paid")
+                  ?.filter(i => i.status === "PAID")
                   .sort((a, b) => new Date(b.paymentDate || "").getTime() - new Date(a.paymentDate || "").getTime())[0];
 
                 return (
@@ -650,15 +675,14 @@ export default function PaluwaganManagementPage() {
                         <span>Payment Progress</span>
                         <span>{progressPct}% Paid</span>
                       </div>
-                      {/* Text progress bar as required */}
                       <div className="font-mono text-emerald-700 font-bold block select-none">
-                        {`${"█".repeat(Math.floor(progressPct / 10))}${"░".repeat(10 - Math.floor(progressPct / 10))} ${progressPct}% Paid`}
+                        {progressPct}% Paid
                       </div>
                     </div>
 
                     <div className="space-y-1.5 border-t border-slate-200/50 pt-3 text-[10px]">
-                      <div>Payments Made: **{numPaymentsMade}** installments</div>
-                      <div>Remaining Count: **{remInstallments}** payments</div>
+                      <div>Payments Made: <strong>{numPaymentsMade}</strong> installments</div>
+                      <div>Remaining Count: <strong>{remInstallments}</strong> payments</div>
                       <div className="text-blue-600 font-bold">Next Due Date: {selectedMemberOrder.nextDueDate || "Fully Settled"}</div>
                       <div className="text-slate-450">Last Payment: {lastPayment ? `${lastPayment.paymentDate} (₱${lastPayment.amountPaid.toLocaleString()})` : "No payment yet"}</div>
                     </div>
@@ -689,8 +713,8 @@ export default function PaluwaganManagementPage() {
                   </TableHeader>
                   <TableBody>
                     {selectedMemberOrder.paluwaganSchedule?.map((installment) => {
-                      const isOverdue = installment.status === "Overdue";
-                      const isPaid = installment.status === "Paid";
+                      const isOverdue = installment.status === "OVERDUE";
+                      const isPaid = installment.status === "PAID";
                       
                       return (
                         <TableRow key={installment.installmentNumber}>
@@ -811,7 +835,7 @@ export default function PaluwaganManagementPage() {
             <TableBody>
               {filteredMembers.map((o) => {
                 const batchName = paluwaganBatches.find(b => b.id === o.batchId)?.name || "Unlinked";
-                const hasOverdue = o.paluwaganSchedule?.some(i => i.status === "Overdue");
+                const hasOverdue = o.paluwaganSchedule?.some(i => i.status === "OVERDUE");
                 const isFullyPaid = o.remainingBalance === 0;
 
                 return (
@@ -873,25 +897,39 @@ export default function PaluwaganManagementPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="font-bold text-slate-600">Batch Start Date</label>
+              <label className="font-bold text-slate-600 uppercase text-[10px]">Batch Duration</label>
+              <select
+                value={newBatchForm.durationMonths}
+                onChange={(e) => {
+                  const dur = Number(e.target.value) as 8 | 12;
+                  const computedEnd = calculateBatchEndDate(newBatchForm.startDate, dur);
+                  setNewBatchForm({ ...newBatchForm, durationMonths: dur, endDate: computedEnd });
+                }}
+                className="w-full p-2 border border-slate-205 rounded-xl font-bold text-xs"
+              >
+                <option value={8}>8 Months (16 Installments)</option>
+                <option value={12}>12 Months (24 Installments)</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="font-bold text-slate-600 uppercase text-[10px]">Batch Start Date</label>
               <input
                 type="date"
                 required
                 value={newBatchForm.startDate}
-                onChange={(e) => setNewBatchForm({ ...newBatchForm, startDate: e.target.value })}
-                className="w-full p-2 border border-slate-205 rounded-xl font-bold text-emerald-700"
+                onChange={(e) => {
+                  const start = e.target.value;
+                  const computedEnd = calculateBatchEndDate(start, newBatchForm.durationMonths);
+                  setNewBatchForm({ ...newBatchForm, startDate: start, endDate: computedEnd });
+                }}
+                className="w-full p-2 border border-slate-205 rounded-xl font-bold text-emerald-700 text-xs"
               />
             </div>
-            <div className="space-y-1">
-              <label className="font-bold text-slate-600">Batch Target End Date</label>
-              <input
-                type="date"
-                required
-                value={newBatchForm.endDate}
-                onChange={(e) => setNewBatchForm({ ...newBatchForm, endDate: e.target.value })}
-                className="w-full p-2 border border-slate-205 rounded-xl font-bold"
-              />
-            </div>
+          </div>
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
+            <div className="font-bold text-slate-700">Batch Target End Date (Calculated):</div>
+            <div className="font-mono font-extrabold text-emerald-800">{newBatchForm.endDate || calculateBatchEndDate(newBatchForm.startDate, newBatchForm.durationMonths)}</div>
+            <div className="text-[10px] text-slate-500">Fixed payment dates will be automatically generated on the 15th and 30th of each month.</div>
           </div>
 
           {successMsg && (
@@ -957,10 +995,10 @@ export default function PaluwaganManagementPage() {
         <form onSubmit={handleRecordPaySubmit} className="space-y-4 py-2 text-xs">
           {selectedMemberOrder && selectedSchedInstallment && (
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-150 space-y-1 font-semibold text-slate-700">
-              <div>Account: **{selectedMemberOrder.customerName}**</div>
-              <div>Installment Number: **#{selectedSchedInstallment.installmentNumber}**</div>
-              <div>Expected Installment Date: **{selectedSchedInstallment.dueDate}**</div>
-              <div>Standard Installment Due: **₱{selectedSchedInstallment.amountDue.toLocaleString()}**</div>
+              <div>Account: <strong>{selectedMemberOrder.customerName}</strong></div>
+              <div>Installment Number: <strong>#{selectedSchedInstallment.installmentNumber}</strong></div>
+              <div>Expected Installment Date: <strong>{selectedSchedInstallment.dueDate}</strong></div>
+              <div>Standard Installment Due: <strong>₱{selectedSchedInstallment.amountDue.toLocaleString()}</strong></div>
             </div>
           )}
 

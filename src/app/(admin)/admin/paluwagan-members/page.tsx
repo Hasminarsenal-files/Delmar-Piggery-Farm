@@ -391,7 +391,7 @@ export default function PaluwaganMembersPage() {
                                 <span className="font-bold text-[9px] text-slate-450 block">Inst. #{item.installmentNumber}</span>
                                 <span className="font-bold text-slate-800 text-[10.5px]">₱{item.amountDue.toLocaleString()}</span>
                                 <span className={`text-[8.5px] font-extrabold uppercase mt-1 ${
-                                  item.status === "Paid" ? "text-emerald-600" : item.status === "Overdue" ? "text-rose-600" : "text-slate-500"
+                                  item.status === "PAID" ? "text-emerald-600" : item.status === "OVERDUE" ? "text-rose-600" : "text-slate-500"
                                 }`}>
                                   {item.status}
                                 </span>
