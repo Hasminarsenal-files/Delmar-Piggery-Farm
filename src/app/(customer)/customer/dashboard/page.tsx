@@ -664,7 +664,7 @@ export default function CustomerDashboard() {
             {customerOrders.filter(o => o.orderType === "Paluwagan").length === 0 ? (
               <Card className="p-6 bg-white border border-slate-200/60 rounded-3xl text-center space-y-3">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">No Paluwagan Plan</span>
-                <p className="text-xs text-slate-500 font-medium">Join a Paluwagan batch to save and pay for piglets or catering programs in convenient monthly installments.</p>
+                <p className="text-xs text-slate-500 font-medium">Join a Paluwagan batch to save and pay for Crispylicious Lechon in convenient monthly installments.</p>
                 <button 
                   onClick={openChatSupport}
                   className="text-xs text-[#2D6A4F] hover:text-[#1B4332] font-bold hover:underline cursor-pointer"

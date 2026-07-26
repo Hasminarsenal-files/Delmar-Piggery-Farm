@@ -63,7 +63,7 @@ export default function CustomerPaluwaganPage() {
           <h1 className="text-xl sm:text-2xl font-extrabold font-heading text-slate-800">My Paluwagan Hub</h1>
           <p className="text-sm text-slate-500 font-medium leading-relaxed">
             You don't have any active Paluwagan plans or applications at the moment. 
-            Join a Paluwagan batch to save and pay for piglets or catering programs in convenient bi-weekly installments!
+            Join a Paluwagan batch to save and pay for Crispylicious Lechon in convenient bi-weekly installments!
           </p>
         </div>
         <Link href="/products">
