@@ -10,21 +10,19 @@ import {
   Calendar,
   PiggyBank,
   Truck,
-  CreditCard,
-  User,
-  Headphones,
   Search,
-  Plus,
-  Minus,
-  MessageSquare,
+  ChevronDown,
   Sparkles,
   ArrowRight,
   X,
-  ChevronDown
+  MessageSquare,
+  ShieldCheck,
+  FileText
 } from "lucide-react";
 import { AIChatWidget } from "@/components/ui/AIChatWidget";
 
 interface FAQItem {
+  id: string;
   category: string;
   categoryName: string;
   q: string;
@@ -34,443 +32,455 @@ interface FAQItem {
 export default function FAQsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [openQuestion, setOpenQuestion] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
-  // Categories list
+  // Category Tabs Configuration
   const categories = [
-    { id: "all", name: "All Topics", icon: HelpCircle },
+    { id: "all", name: "All Questions", icon: HelpCircle },
     { id: "general", name: "General", icon: Info },
     { id: "products", name: "Products & Services", icon: ShoppingBag },
     { id: "orders", name: "Orders & Reservations", icon: Calendar },
     { id: "paluwagan", name: "Paluwagan", icon: PiggyBank },
-    { id: "delivery", name: "Delivery", icon: Truck },
-    { id: "payments", name: "Payments", icon: CreditCard },
-    { id: "account", name: "Account", icon: User },
-    { id: "support", name: "Support", icon: Headphones },
+    { id: "delivery", name: "Delivery & Payments", icon: Truck },
   ];
 
-  // Comprehensive FAQ Database
+  // Official FAQ Dataset for Delmar Piggery Farm & Savorlicious Food Services
   const faqData: FAQItem[] = [
-    // General
+    // 1. GENERAL
     {
+      id: "gen-1",
       category: "general",
       categoryName: "General",
-      q: "What is Delmar Business Management?",
-      a: "We are an integrated agriculture and culinary enterprise in Zamboanga del Sur. We manage two main divisions: Delmar Piggery Farm, a modern biosecure swine breeding facility, and Savorlicious Food Services, which specializes in spit-roast crispy lechon and full-service event catering."
+      q: "What is Delmar Piggery Farm?",
+      a: "Delmar Piggery Farm offers quality piglets, fattening pigs, and fresh pork products. The business also provides food services through Savorlicious Food Services, including Crispylicious Lechon, catering, packed meals, and Bilao & Party Trays."
     },
     {
+      id: "gen-2",
       category: "general",
       categoryName: "General",
-      q: "Where is your main office and farm located?",
-      a: "Our biosecure breeding farm is located in Dumalinao, Zamboanga del Sur. Our main administrative office and Savorlicious catering dispatch hubs are positioned locally to efficiently serve the surrounding municipalities."
+      q: "What is Savorlicious Food Services?",
+      a: "Savorlicious Food Services is the food-service side of the business offering Crispylicious Lechon, catering, packed meals, and Bilao & Party Trays."
     },
     {
+      id: "gen-3",
       category: "general",
       categoryName: "General",
-      q: "What are your business and visiting hours?",
-      a: "Our administrative offices and customer support hotline are open Monday to Saturday, from 8:00 AM to 5:00 PM. Please note that physical visits to our breeding farm facilities are strictly restricted for biosecurity reasons, but virtual tours and video calls can be scheduled."
+      q: "Do I need an account to browse the products?",
+      a: "No. Customers can browse available products and services without registering. An account is required when placing orders or using customer-specific features."
     },
-    // Products & Services
+
+    // 2. PRODUCTS & SERVICES
     {
+      id: "prod-1",
       category: "products",
       categoryName: "Products & Services",
-      q: "What pig breeds do you offer for commercial breeding?",
-      a: "We specialize in breeding pedigree Landrace, Large White, and Duroc terminal boars. Our commercial piglets (weanlings) are Landrace-Large White F1 females crossed with pure Duroc boars, selected for rapid growth, high feed conversion ratio, and excellent carcass quality."
+      q: "What products are available from Delmar Piggery Farm?",
+      a: "The farm offers piglets, fattening pigs, and fresh pork products. Availability may change depending on current inventory."
     },
     {
+      id: "prod-2",
       category: "products",
       categoryName: "Products & Services",
-      q: "Are the piglets and breeder hogs fully vaccinated?",
-      a: "Yes! Every piglet undergoes a comprehensive vaccination program guided by our resident veterinarian. This includes inoculations for Mycoplasma hyopneumoniae, Hog Cholera, and essential iron supplementations. A signed health card is provided with every purchase."
+      q: "What services are available from Savorlicious Food Services?",
+      a: "Available services include Crispylicious Lechon, catering, packed meals, and Bilao & Party Trays."
     },
     {
+      id: "prod-3",
       category: "products",
       categoryName: "Products & Services",
-      q: "What catering packages do Savorlicious Food Services offer?",
-      a: "Savorlicious offers a wide range of services including whole charcoal-roasted Crispylicious Lechon, full-course buffet catering, customizable party food trays, and dessert setups for weddings, birthdays, corporate functions, and other celebrations."
+      q: "Can I check product availability online?",
+      a: "Yes. Product availability is updated by the administrator. If an item is unavailable, it may be marked as unavailable or archived."
     },
-    // Orders & Reservations
+
+    // 3. ORDERS & RESERVATIONS
     {
+      id: "ord-1",
       category: "orders",
       categoryName: "Orders & Reservations",
-      q: "How do I reserve a batch of piglets or fattening hogs?",
-      a: "You can book directly through our online portal. Sign in to your Customer Dashboard, navigate to the Reservations page, select an active batch, enter the quantity, and upload a digital copy of your deposit receipt."
+      q: "What is the difference between a Cash Order and a Reservation?",
+      a: "A Cash Order is a regular purchase, while a Reservation allows you to reserve a product or service for a specified date, subject to administrator approval."
     },
     {
+      id: "ord-2",
       category: "orders",
       categoryName: "Orders & Reservations",
-      q: "How many days in advance should I reserve a Crispylicious Lechon?",
-      a: "We advise booking at least 5 to 7 days before your scheduled gathering. For peak holiday seasons (such as Christmas and New Year) or large catering events, we highly recommend reserving at least 2 weeks in advance to ensure slot availability."
+      q: "Can I order Crispylicious Lechon without joining Paluwagan?",
+      a: "Yes. Customers can still order Crispylicious Lechon normally through Cash or Reservation. Paluwagan is completely separate and is available only to approved Paluwagan members."
     },
     {
+      id: "ord-3",
       category: "orders",
       categoryName: "Orders & Reservations",
-      q: "Can I edit or cancel my reservation?",
-      a: "Reservations can be edited or cancelled through your dashboard or by contacting support at least 3 days before your scheduled collection or event date. Note that reservation down payments are non-refundable but can be credited to future bookings."
+      q: "Can I cancel or modify my order?",
+      a: "Order changes or cancellations depend on the order status and business policy. Contact the administrator as soon as possible for assistance."
     },
-    // Paluwagan
+
+    // 4. PALUWAGAN
     {
+      id: "pal-1",
       category: "paluwagan",
       categoryName: "Paluwagan",
-      q: "What is the Delmar Paluwagan Scheme?",
-      a: "The Delmar Paluwagan is a community-based co-sharing initiative where registered members pool small weekly or monthly savings to raise a collective batch of hogs. When the batch reaches market weight and is sold, profits are shared proportionally among the participants."
+      q: "What is the Paluwagan Program?",
+      a: "The Paluwagan Program allows approved members to purchase eligible Crispylicious Lechon through an installment payment arrangement."
     },
     {
+      id: "pal-2",
       category: "paluwagan",
       categoryName: "Paluwagan",
-      q: "How are my contributions tracked in the Paluwagan?",
-      a: "Once you subscribe to a Paluwagan slot, all your contributions, ledger updates, and matching livestock batch growth records are tracked in real-time in your member dashboard. You will receive digital receipts for every payment."
+      q: "Is Paluwagan available for all products?",
+      a: "No. Paluwagan is ONLY available for Crispylicious Lechon. Piglets, fattening pigs, fresh pork, catering, packed meals, and Bilao & Party Trays are not included."
     },
     {
+      id: "pal-3",
       category: "paluwagan",
       categoryName: "Paluwagan",
-      q: "What measures protect members if a hog falls sick?",
-      a: "We operate a strict closed-tunnel biosecurity system to minimize health risks. Furthermore, all Paluwagan batches are backed by our farm insurance and replacement pool. In the unlikely event of stock mortality, the farm replaces the hog at no extra cost to the group."
+      q: "Do I need to register for Paluwagan?",
+      a: "Yes. Only customers who want to use the Paluwagan program need to complete the separate Paluwagan Membership registration."
     },
-    // Delivery
     {
+      id: "pal-4",
+      category: "paluwagan",
+      categoryName: "Paluwagan",
+      q: "Can I order normally even if I am not a Paluwagan member?",
+      a: "Yes. Customers can still place regular Cash Orders or Reservations without joining Paluwagan."
+    },
+    {
+      id: "pal-5",
+      category: "paluwagan",
+      categoryName: "Paluwagan",
+      q: "Can I immediately use Paluwagan after registering?",
+      a: "No. Your application must first be reviewed and approved by the administrator."
+    },
+    {
+      id: "pal-6",
+      category: "paluwagan",
+      categoryName: "Paluwagan",
+      q: "Why do I need to submit an ID?",
+      a: "The ID and other information are collected to help verify the identity of applicants and protect the business from fraudulent Paluwagan registrations."
+    },
+    {
+      id: "pal-7",
+      category: "paluwagan",
+      categoryName: "Paluwagan",
+      q: "How does Paluwagan payment work?",
+      a: "After approval and an eligible Paluwagan Lechon order, the system creates a payment schedule. Payments are due every 15 days according to the member's assigned schedule."
+    },
+    {
+      id: "pal-8",
+      category: "paluwagan",
+      categoryName: "Paluwagan",
+      q: "Where can I see my Paluwagan balance?",
+      a: "Go to My Paluwagan. You can see your total contract amount, total payments, remaining balance, payment progress, upcoming due dates, payment schedule, and payment history."
+    },
+    {
+      id: "pal-9",
+      category: "paluwagan",
+      categoryName: "Paluwagan",
+      q: "Will I receive a reminder before my payment is due?",
+      a: "Yes. The system sends an email reminder 2 days before the scheduled Paluwagan payment."
+    },
+    {
+      id: "pal-10",
+      category: "paluwagan",
+      categoryName: "Paluwagan",
+      q: "Can I see my payment history?",
+      a: "Yes. The My Paluwagan page displays recorded payments, receipt numbers, dates, amounts, payment status, and remaining balance."
+    },
+
+    // 5. DELIVERY & PAYMENTS
+    {
+      id: "del-1",
       category: "delivery",
-      categoryName: "Delivery",
-      q: "Do you deliver live pigs and piglets?",
-      a: "Yes, we operate specialized, well-ventilated livestock transport vehicles to deliver bulk purchases of piglets and fattening hogs safely to your farm within Zamboanga del Sur. Logistical delivery fees are calculated based on travel distance."
+      categoryName: "Delivery & Payments",
+      q: "Do I need to provide my address?",
+      a: "Yes. Customers should provide their complete delivery address when placing an order so the administrator knows where the order should be delivered."
     },
     {
+      id: "del-2",
       category: "delivery",
-      categoryName: "Delivery",
-      q: "How is the Savorlicious Lechon delivered?",
-      a: "To ensure maximum crispiness, our roasted lechons are transported in specialized thermal carriers immediately after roasting and delivered hot to your doorstep. We coordinate dispatch times closely with your event schedule."
+      categoryName: "Delivery & Payments",
+      q: "Can I update my delivery address?",
+      a: "You can update your address through your profile, subject to the system's rules and the status of existing orders."
     },
     {
+      id: "del-3",
       category: "delivery",
-      categoryName: "Delivery",
-      q: "Are self-pickups allowed?",
-      a: "Yes! You can arrange to pick up your live hog orders directly from our farm dispatch gate, or pick up food trays and whole lechons from our commercial culinary hub during designated hours."
-    },
-    // Payments
-    {
-      category: "payments",
-      categoryName: "Payments",
-      q: "What payment channels do you accept?",
-      a: "We accept secure digital transfers via GCash, Maya, and major Philippine banks (BDO, Metrobank). Cash payments are also accepted for office walk-ins or direct farm pickups."
+      categoryName: "Delivery & Payments",
+      q: "How will I know if my order has been approved?",
+      a: "Check My Orders or My Reservations for the current status. The system may also send email notifications for important updates."
     },
     {
-      category: "payments",
-      categoryName: "Payments",
-      q: "Is there a down payment required for bookings?",
-      a: "Yes. To confirm livestock reservations and catering setups, a 50% reservation deposit is required. The remaining 50% balance must be settled upon physical delivery, setup, or pickup."
-    },
-    {
-      category: "payments",
-      categoryName: "Payments",
-      q: "How long does payment validation take?",
-      a: "Once you upload your transaction slip via the portal, our accounting staff will verify the funds. This process is usually completed within 1 to 2 hours, and a notification alert will be sent to your account."
-    },
-    // Account
-    {
-      category: "account",
-      categoryName: "Account",
-      q: "How do I create a Delmar customer account?",
-      a: "Click 'Register' in the navigation bar, provide your name, contact details, and location, and set up your password. A verification link will be sent to confirm your details, after which you can access the reservation portal."
-    },
-    {
-      category: "account",
-      categoryName: "Account",
-      q: "Can I manage multiple delivery addresses?",
-      a: "Yes. In your Customer Dashboard's Profile Settings, you can save and edit multiple delivery addresses, making it easy to toggle between your farm location, home address, or event venues."
-    },
-    {
-      category: "account",
-      categoryName: "Account",
-      q: "What should I do if I forget my login password?",
-      a: "Simply click on the 'Forgot Password' link on the sign-in page, enter your registered email address, and we will send you a secure link to reset your password immediately."
-    },
-    // Support
-    {
-      category: "support",
-      categoryName: "Support",
-      q: "How do I reach customer support?",
-      a: "You can open a support ticket under the 'Help & Support' tab in your dashboard, submit a message via our Contact page, or use the 24/7 AI Chat Assistant available on the portal."
-    },
-    {
-      category: "support",
-      categoryName: "Support",
-      q: "Is the AI Chat Assistant capable of checking my order status?",
-      a: "Yes! If you are logged in, our AI Assistant can retrieve and summarize your active orders, livestock reservations, and ledger status in real-time, in addition to answering general questions."
-    },
-    {
-      category: "support",
-      categoryName: "Support",
-      q: "What is the typical resolution time for support tickets?",
-      a: "Our helpdesk team reviews incoming support tickets during regular business hours (8:00 AM - 5:00 PM). Most queries are resolved within 2 to 4 hours of submission."
+      id: "del-4",
+      category: "delivery",
+      categoryName: "Delivery & Payments",
+      q: "Will I receive an email after making a payment?",
+      a: "Yes. The system can send an email confirmation after the administrator records your payment."
     }
   ];
 
-  // Filtering FAQs based on Search & Category Selection
+  // Filtering Logic
   const filteredFAQs = useMemo(() => {
-    return faqData.filter((faq) => {
+    return faqData.filter((item) => {
+      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
       const matchesSearch =
-        faq.q.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        faq.a.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        faq.categoryName.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesCategory =
-        selectedCategory === "all" || faq.category === selectedCategory;
-
-      return matchesSearch && matchesCategory;
+        searchTerm.trim() === "" ||
+        item.q.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.a.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesCategory && matchesSearch;
     });
-  }, [searchTerm, selectedCategory]);
+  }, [selectedCategory, searchTerm, faqData]);
 
-
-  const openChatSupport = () => {
-    window.dispatchEvent(new Event("open-chat"));
+  // Helper count per category
+  const getCategoryCount = (catId: string) => {
+    if (catId === "all") return faqData.length;
+    return faqData.filter((f) => f.category === catId).length;
   };
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05
-      }
-    }
-  };
-
-  const itemVariants: any = {
-    hidden: { opacity: 0, y: 15 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 350, damping: 25 } }
+  const toggleAccordion = (id: string) => {
+    setOpenId(openId === id ? null : id);
   };
 
   return (
-    <div className="min-h-screen bg-[#F9FBF9] text-[#1a2e22] font-sans pb-20">
-      
-      {/* Background elegant circles */}
-      <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-[#eaf6ee] to-transparent -z-10 pointer-events-none" />
-      <div className="absolute top-40 right-10 w-72 h-72 rounded-full bg-primary-100/30 blur-3xl -z-10 pointer-events-none" />
-      <div className="absolute top-80 left-5 w-80 h-80 rounded-full bg-gold-light/20 blur-3xl -z-10 pointer-events-none" />
+    <div className="min-h-screen bg-[#070F0B] text-slate-100 font-sans pb-24 relative overflow-hidden">
+      {/* Subtle Glow Accent in Background */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-emerald-600/20 via-emerald-950/30 to-transparent blur-3xl pointer-events-none -z-10" />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 space-y-12">
-        
-        {/* Title / Hero */}
-        <div className="text-center space-y-4 max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-50 border border-primary-200/50 text-primary-700 text-xs font-bold uppercase tracking-wider mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-gold animate-pulse" />
-            Support Center
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold font-heading text-primary-900 tracking-tight leading-tight">
-            Frequently Asked Questions
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-semibold leading-relaxed">
-            Find answers to common questions about our biosecure swine breeding, Savorlicious catering plans, Paluwagan rotating savings scheme, and logistics.
-          </p>
-        </div>
+      {/* Hero Header Section */}
+      <div className="relative pt-14 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300 text-xs font-extrabold tracking-widest uppercase shadow-lg"
+        >
+          <HelpCircle className="w-4 h-4 text-emerald-400" />
+          Help Center & Knowledge Base
+        </motion.div>
 
-        {/* Search Bar - Glassmorphism */}
-        <div className="max-w-xl mx-auto relative z-20">
-          <div className="relative backdrop-blur-md bg-white/70 border border-slate-200/80 rounded-2xl shadow-sm focus-within:shadow-md focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/10 transition-all duration-300 flex items-center p-1.5">
-            <Search className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
+        <motion.h1
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="text-3xl sm:text-5xl font-heading font-black text-white tracking-tight"
+        >
+          Frequently Asked Questions
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
+          className="text-base sm:text-lg font-heading font-bold text-amber-400 tracking-wide"
+        >
+          Delmar Piggery Farm & Savorlicious Food Services
+        </motion.p>
+
+        <motion.p
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="max-w-2xl mx-auto text-xs sm:text-sm text-slate-300 leading-relaxed font-normal"
+        >
+          Find clear answers regarding our livestock products, catering services, order reservations, 
+          and Crisprylicious Lechon Paluwagan program policies.
+        </motion.p>
+
+        {/* Live Search Bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.25 }}
+          className="max-w-2xl mx-auto pt-4"
+        >
+          <div className="relative">
+            <Search className="w-5 h-5 text-emerald-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search topics (e.g. paluwagan, vaccination, catering)..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setOpenQuestion(null); // Reset open accordion on search
-              }}
-              className="w-full text-xs font-medium bg-transparent border-none outline-none focus:outline-none focus:ring-0 pl-2.5 pr-8 py-2 text-slate-800 placeholder-slate-400 relative z-20 cursor-text"
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search any question or keyword (e.g. Paluwagan, Lechon, ID, Address)..."
+              className="w-full bg-[#101D17] border border-emerald-500/40 rounded-2xl pl-12 pr-10 py-4 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30 transition-all shadow-xl font-medium"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute right-4 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100 transition-all cursor-pointer z-30"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                aria-label="Clear search"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
-        </div>
+        </motion.div>
+      </div>
 
-        {/* Category Grid */}
-        <div className="space-y-4">
-          <h3 className="text-xs uppercase font-extrabold text-primary-800/80 tracking-wider text-center sm:text-left">
-            Browse by Category
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3">
-            {categories.map((cat) => {
-              const Icon = cat.icon;
-              const isActive = selectedCategory === cat.id;
-              return (
-                <motion.button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategory(cat.id);
-                    setOpenQuestion(null); // Reset open accordion on category change
-                  }}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 text-center gap-2 cursor-pointer shadow-xs ${
-                    isActive
-                      ? "bg-gradient-to-br from-primary-600 to-primary-700 text-white border-gold/70 shadow-md shadow-primary-900/10"
-                      : "bg-white hover:bg-slate-50 text-slate-700 hover:text-primary-700 border-slate-200/80"
+      {/* Main Content Area */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        {/* Category Tabs Filter */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-none justify-start md:justify-center"
+        >
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            const isSelected = selectedCategory === cat.id;
+            const count = getCategoryCount(cat.id);
+
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold whitespace-nowrap transition-all duration-300 cursor-pointer shadow-md ${
+                  isSelected
+                    ? "bg-emerald-600 text-white border border-emerald-400 shadow-emerald-950/60 scale-105"
+                    : "bg-[#111E18] text-slate-300 border border-emerald-900/50 hover:bg-[#182820] hover:text-white"
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isSelected ? "text-amber-300" : "text-emerald-400"}`} />
+                <span>{cat.name}</span>
+                <span
+                  className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    isSelected ? "bg-emerald-900 text-emerald-200" : "bg-[#09120D] text-slate-400 border border-emerald-900/60"
                   }`}
                 >
-                  <div
-                    className={`p-2 rounded-xl transition-colors duration-300 ${
-                      isActive ? "bg-white/15 text-white" : "bg-primary-50 text-primary-600"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider block leading-tight">
-                    {cat.name}
-                  </span>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </motion.div>
 
-        {/* FAQ List / Accordion & No Match Handler */}
-        <div className="max-w-4xl mx-auto space-y-6 pt-4">
-          {filteredFAQs.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center py-16 bg-white border border-slate-200/60 rounded-3xl shadow-xs space-y-5 px-6 max-w-xl mx-auto"
-            >
-              <div className="w-14 h-14 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto border border-amber-100">
-                <HelpCircle className="w-7 h-7" />
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-base font-extrabold font-heading text-slate-800">No matching questions found</h4>
-                <p className="text-xs text-slate-500 leading-relaxed font-semibold">
-                  Can't find your answer? Contact us or chat with our AI Assistant.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-2">
-                <Link href="/contact" className="w-full sm:w-auto">
-                  <button className="w-full px-5 py-2.5 rounded-xl border border-slate-200 hover:border-primary-500 hover:bg-slate-50 text-xs font-bold text-slate-700 hover:text-primary-700 shadow-xs transition-all cursor-pointer">
-                    Contact Us
-                  </button>
-                </Link>
-                <button
-                  onClick={openChatSupport}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-850 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all cursor-pointer border border-primary-800/30"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  Chat with AI Assistant
-                </button>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="show"
-              className="space-y-4"
-            >
-              {filteredFAQs.map((faq) => {
-                const isOpen = openQuestion === faq.q;
+        {/* FAQ Accordion List */}
+        <div className="space-y-4 pt-2">
+          <AnimatePresence mode="popLayout">
+            {filteredFAQs.length > 0 ? (
+              filteredFAQs.map((faq, idx) => {
+                const isOpen = openId === faq.id;
+
                 return (
                   <motion.div
-                    key={faq.q}
-                    variants={itemVariants}
-                    className={`border rounded-2xl overflow-hidden transition-all duration-300 ${
-                      isOpen
-                        ? "border-primary-600 bg-white shadow-md shadow-primary-950/5"
-                        : "border-slate-200/80 bg-white hover:border-primary-300 hover:shadow-xs"
-                    }`}
+                    key={faq.id}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.3, delay: idx * 0.03 }}
+                    className="bg-[#111E18] border border-emerald-500/30 hover:border-emerald-500/60 rounded-2xl overflow-hidden shadow-xl transition-all duration-300"
                   >
                     <button
-                      onClick={() => setOpenQuestion(isOpen ? null : faq.q)}
-                      className="w-full px-6 py-4.5 flex items-center justify-between text-left transition-colors cursor-pointer select-none"
+                      onClick={() => toggleAccordion(faq.id)}
+                      className="w-full px-6 py-5 flex items-center justify-between gap-4 text-left transition-colors cursor-pointer group"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 pr-4">
-                        <span
-                          className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md tracking-wider shrink-0 w-fit ${
-                            isOpen
-                              ? "bg-primary-600 text-white"
-                              : "bg-primary-50 text-primary-700 border border-primary-200/20"
-                          }`}
-                        >
+                      <div className="flex items-center gap-3.5 pr-2">
+                        <span className="inline-flex items-center justify-center text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-md bg-emerald-950 border border-emerald-500/30 text-amber-400 shrink-0">
                           {faq.categoryName}
                         </span>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                        <h3 className="text-sm sm:text-base font-heading font-extrabold text-white group-hover:text-emerald-300 transition-colors leading-snug">
                           {faq.q}
-                        </h4>
+                        </h3>
                       </div>
-                      <motion.div
-                        animate={{ rotate: isOpen ? 180 : 0 }}
-                        transition={{ duration: 0.2 }}
-                        className={`p-1.5 rounded-full shrink-0 ${
-                          isOpen ? "bg-primary-50 text-primary-600" : "bg-slate-50 text-slate-400"
-                        }`}
-                      >
+                      <div className={`p-2 rounded-xl border transition-all duration-300 shrink-0 ${
+                        isOpen 
+                          ? "bg-emerald-600 text-white border-emerald-400 rotate-180" 
+                          : "bg-[#09120D] text-emerald-400 border-emerald-900/60 group-hover:bg-emerald-950"
+                      }`}>
                         <ChevronDown className="w-4 h-4" />
-                      </motion.div>
+                      </div>
                     </button>
 
-                    <AnimatePresence initial={false}>
+                    <AnimatePresence>
                       {isOpen && (
                         <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.25, ease: "easeInOut" }}
-                          className="overflow-hidden bg-[#FCFDFB] border-t border-slate-100"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3, ease: "easeInOut" }}
+                          className="overflow-hidden border-t border-emerald-900/60 bg-[#09120E]"
                         >
-                          <div className="px-6 py-5 text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">
-                            {faq.a}
+                          <div className="px-6 py-5 text-xs sm:text-sm text-slate-200 leading-relaxed font-normal space-y-2">
+                            <p>{faq.a}</p>
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </motion.div>
                 );
-              })}
-            </motion.div>
-          )}
+              })
+            ) : (
+              /* No Search Results Found State */
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-[#111E18] border border-emerald-500/30 rounded-3xl p-10 text-center space-y-4 max-w-md mx-auto my-8 shadow-2xl"
+              >
+                <div className="w-16 h-16 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-inner">
+                  <Search className="w-8 h-8 stroke-[1.5]" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-heading font-black text-white">No Matching Questions Found</h3>
+                  <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                    We couldn't find any FAQs matching "<span className="text-amber-400 font-bold">{searchTerm}</span>". 
+                    Try adjusting your search keywords or select another topic filter.
+                  </p>
+                </div>
+                <div className="pt-2 flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("all");
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+                  >
+                    Clear Search Filters
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Bottom CTA Block */}
+        {/* Footer Quick Action Bar */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="max-w-4xl mx-auto rounded-3xl bg-gradient-to-br from-primary-800 via-primary-900 to-primary-950 p-8 sm:p-12 text-center text-white relative overflow-hidden shadow-xl border border-primary-750"
+          transition={{ duration: 0.5 }}
+          className="bg-gradient-to-r from-[#0C1712] via-[#12221A] to-[#0C1712] border border-emerald-500/40 rounded-3xl p-8 text-center space-y-6 max-w-4xl mx-auto shadow-2xl mt-12"
         >
-          {/* Decorative background grid */}
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1.2px,transparent_1.2px)] [background-size:20px_20px] opacity-[0.03] pointer-events-none" />
-          <div className="absolute -top-24 -left-24 w-48 h-48 rounded-full bg-gold/10 blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-48 h-48 rounded-full bg-primary-400/10 blur-2xl pointer-events-none" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950 text-emerald-300 text-xs font-extrabold border border-emerald-500/30 uppercase tracking-widest">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            Still Have Questions?
+          </div>
 
-          <div className="space-y-6 relative z-10">
-            <h3 className="text-2xl sm:text-3xl font-extrabold font-heading tracking-tight leading-snug">
-              Still have questions?
-            </h3>
-            <p className="text-xs sm:text-sm text-emerald-100/90 max-w-xl mx-auto leading-relaxed font-semibold">
-              Can't find the answer you're looking for? Reach out to our dedicated team or get instant help from our AI Assistant.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2 max-w-md mx-auto">
-              <Link href="/contact" className="w-full sm:w-1/2">
-                <button className="w-full bg-white hover:bg-slate-50 text-primary-950 text-xs sm:text-sm font-bold uppercase tracking-wider py-3 px-6 rounded-xl border border-transparent shadow-md transition-all duration-300 cursor-pointer">
-                  Contact Us
-                </button>
-              </Link>
-              <button
-                onClick={openChatSupport}
-                className="w-full sm:w-1/2 bg-gold hover:bg-[#b88910] text-slate-950 text-xs sm:text-sm font-bold uppercase tracking-wider py-3 px-6 rounded-xl border border-transparent shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                Chat with AI
+          <h3 className="text-xl sm:text-2xl font-heading font-black text-white">
+            Need Additional Assistance or Want to Read Our Terms?
+          </h3>
+
+          <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto font-normal">
+            Explore our official Business Terms & Conditions or contact our team directly for prompt assistance.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+            <Link href="/terms">
+              <button className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all shadow-lg flex items-center gap-2 cursor-pointer">
+                <FileText className="w-4 h-4 text-amber-300" />
+                <span>View Terms & Conditions</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
-            </div>
+            </Link>
+            <Link href="/contact">
+              <button className="px-6 py-3 rounded-xl bg-[#08120E] border border-slate-700 text-slate-200 hover:bg-slate-800 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer">
+                <MessageSquare className="w-4 h-4 text-emerald-400" />
+                <span>Contact Administrator</span>
+              </button>
+            </Link>
           </div>
         </motion.div>
-
       </div>
 
-      {/* Floating AI Chat Widget Component */}
+      {/* Floating AI Support Widget */}
       <AIChatWidget />
     </div>
   );
