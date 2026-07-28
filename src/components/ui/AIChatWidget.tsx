@@ -127,7 +127,7 @@ export const AIChatWidget: React.FC = () => {
 
     // 1. Browse Piglets / Livestock inquiries
     if (text.includes("browse piglets") || text.includes("piglets") || text.includes("livestock")) {
-      return `We raise top-tier Landrace, Duroc, and Large White crossbreeds under strict biosecurity.\n\n• **Regular Weanling Piglets**: ₱3,500/head\n• **Sowlets (Young Females)**: ₱6,500/head\n• **Boarlets (Young Males)**: ₱5,000/head\n• **Fattening Hogs (Live Weight)**: ₱200/kilo\n\nYou can submit a booking reservation immediately using the dashboard form.`;
+      return `We raise top-tier Landrace, Duroc, and Large White crossbreeds under strict biosecurity.\n\n• **Regular Weanling Piglets**: ₱3,500/head\n• **Sowlets (Young Females)**: ₱6,500/head\n• **Boarlets (Young Males)**: ₱5,000/head\n• **Fattening Hogs (85-100kg Live Weight)**: ₱200/kilo\n\nYou can submit a booking reservation immediately using the dashboard form.`;
     }
 
     // 2. Delivery Information & Area inquiries
@@ -189,7 +189,7 @@ export const AIChatWidget: React.FC = () => {
     }
 
     if (text.includes("price") || text.includes("cost") || text.includes("how much")) {
-      return `Our standard price guides:\n\n• **Weanling Piglets**:\n  - Regular: ₱3,500/head\n  - Sowlet: ₱6,500/head\n  - Boarlet: ₱5,000/head\n• **Fattening Hogs (Live Weight)**: ₱200/kilo\n• **Crispy Lechon**: From ₱6,500 (15kg) to ₱14,500 (55kg)\n• **Catering Buffets**: Set A (₱250/pax), Set B (₱290/pax), Set C (₱340/pax)\n• **Sweets Packages**: Set A (₱3,650), Set B (₱5,500), Set C (₱7,500)\n\nYou can book any of these directly via the booking form in your portal!`;
+      return `Our standard price guides:\n\n• **Weanling Piglets**:\n  - Regular: ₱3,500/head\n  - Sowlet: ₱6,500/head\n  - Boarlet: ₱5,000/head\n• **Fattening Hogs (85-100kg Live Weight)**: ₱200/kilo\n• **Crispy Lechon**: From ₱6,500 (15kg) to ₱14,500 (55kg)\n• **Catering Buffets**: Set A (₱250/pax), Set B (₱290/pax), Set C (₱340/pax)\n• **Sweets Packages**: Set A (₱3,650), Set B (₱5,500), Set C (₱7,500)\n\nYou can book any of these directly via the booking form in your portal!`;
     }
 
     // Fallback using the customized guidelines context
