@@ -60,7 +60,7 @@ export default function ProductsPage() {
       category: "Fattening Pigs",
       description: "Commercial grower finish hog ready for final finishing fattening cycles.",
       price: 200,
-      unit: "per head",
+      unit: "per kilo",
       stockStatus: "Available",
       specifications: "Age: 12 weeks | Bio-Feed Diet",
     },

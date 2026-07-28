@@ -12,7 +12,7 @@ export default function AdminProductsPage() {
     { id: "1", name: "Weanling Piglets (Regular)", category: "Piglets", price: 3500, unit: "per head", status: "Active" },
     { id: "2", name: "Weanling Piglets (Sowlet)", category: "Piglets", price: 6500, unit: "per head", status: "Active" },
     { id: "3", name: "Weanling Piglets (Boarlet)", category: "Piglets", price: 5000, unit: "per head", status: "Active" },
-    { id: "4", name: "Weanling Piglets (Fattening)", category: "Piglets", price: 200, unit: "per head", status: "Active" },
+    { id: "4", name: "Fattening Pigs (Live Weight)", category: "Fattening Pigs", price: 200, unit: "per kilo", status: "Active" },
     { id: "5", name: "Fattening Pigs", category: "Fattening Pigs", price: 12000, unit: "per head", status: "Active" },
     { id: "6", name: "Fresh Pork Belly (Liempo)", category: "Fresh Pork Meat", price: 340, unit: "per kg", status: "Active" },
     { id: "7", name: "Crispylicious Lechon (15kg)", category: "Crispylicious Lechon", price: 6500, unit: "per roasting", status: "Active" },
@@ -171,6 +171,7 @@ export default function AdminProductsPage() {
                   className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium"
                 >
                   <option value="per head">per head</option>
+                  <option value="per kilo">per kilo</option>
                   <option value="per kg">per kg</option>
                   <option value="per roasting">per roasting</option>
                   <option value="per tray set">per tray set</option>
