@@ -32,7 +32,7 @@ export default function ProductsPage() {
       price: 3500,
       unit: "per head",
       stockStatus: "Available",
-      specifications: "Age: 8-10 weeks | Vaccinated",
+      specifications: "Age: 1 month | Vaccinated",
     },
     {
       id: "p2",
@@ -42,7 +42,7 @@ export default function ProductsPage() {
       price: 6500,
       unit: "per head",
       stockStatus: "Available",
-      specifications: "Age: 9 weeks | Selected Breeder",
+      specifications: "Age: 1 month | Selected Breeder",
     },
     {
       id: "p3",
@@ -52,7 +52,7 @@ export default function ProductsPage() {
       price: 5000,
       unit: "per head",
       stockStatus: "Available",
-      specifications: "Age: 9-10 weeks | Selected Stud",
+      specifications: "Age: 1 month | Selected Stud",
     },
     {
       id: "p4",
