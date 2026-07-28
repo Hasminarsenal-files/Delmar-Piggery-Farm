@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
                 Savorlicious Food Services
               </span>
               <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                Premium-grade piglets, quality fattening stock, and crispylicious native lechon. Redefining modern swine farming and sustainable husbandry standards.
+                Premium-grade piglets, quality fattening stock, and crispylicious lechon. Redefining modern swine farming and sustainable husbandry standards.
               </p>
             </div>
             <div className="flex gap-3 pt-2">

@@ -997,7 +997,7 @@ export default function HomePage() {
               Ready to Book Your Farm-to-Table Experience?
             </h2>
             <p className="text-xs sm:text-sm text-slate-650 max-w-xl mx-auto font-semibold leading-relaxed mt-4">
-              Reserve premium piglets for commercial fattening, order native roasted pork, or design a custom banquet course with our food services. Secure your booking slot today.
+              Reserve premium piglets for commercial fattening, order crispylicious roasted pork, or design a custom banquet course with our food services. Secure your booking slot today.
             </p>
           </ScrollReveal>
 
