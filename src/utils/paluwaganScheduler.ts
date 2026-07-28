@@ -9,11 +9,14 @@ export interface PaluwaganScheduleItem {
   dueDate: string;
   amountDue: number;
   amountPaid: number;
-  status: "UPCOMING" | "DUE" | "PAID" | "PARTIALLY PAID" | "OVERDUE" | "MISSED";
+  status: "UPCOMING" | "DUE" | "PAID" | "PARTIALLY PAID" | "OVERDUE" | "MISSED" | "PENDING VERIFICATION" | "REJECTED";
   paymentDate?: string;
   receiptNumber?: string;
   collector?: string;
   remarks?: string;
+  referenceNumber?: string;
+  verificationStatus?: "Pending Verification" | "Paid" | "Rejected";
+  isDuplicateReference?: boolean;
 }
 
 /**

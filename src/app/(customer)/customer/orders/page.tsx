@@ -120,7 +120,7 @@ export default function CustomerOrdersPage() {
                   </TableCell>
                   <TableCell>
                     {(o.paymentStatus === "Rejected" || o.status === "Payment Failed / Action Required") && (
-                      <Button size="sm" variant="outline" onClick={() => handleOpenReserve(o.id, o.paymentReferenceNumber)}>
+                      <Button size="sm" variant="outline" onClick={() => handleOpenResubmit(o.id, o.paymentReferenceNumber)}>
                         <RefreshCw className="w-3 h-3 mr-1" /> Re-submit Ref
                       </Button>
                     )}
