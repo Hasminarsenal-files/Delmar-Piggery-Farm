@@ -46,6 +46,38 @@ export interface InventoryLog {
   createdAt: string;
 }
 
+export interface OnlinePaymentChannel {
+  id: string;
+  providerName: string;
+  accountName: string;
+  accountNumber: string;
+  instructions: string;
+  isActive: boolean;
+  qrCodeUrl?: string;
+}
+
+export type PaymentStatusType =
+  | "Paid"
+  | "Pending Verification"
+  | "Partially Paid"
+  | "Unpaid"
+  | "Pending"
+  | "Rejected";
+
+export type OrderStatusType =
+  | "Payment Verification"
+  | "Pending"
+  | "Approved"
+  | "Preparing"
+  | "Ready for Pickup"
+  | "Out for Delivery"
+  | "Delivered"
+  | "Completed"
+  | "Cancelled"
+  | "Processing"
+  | "Shipped"
+  | "Payment Failed / Action Required";
+
 export interface Reservation {
   id: string;
   customerName: string;
@@ -54,8 +86,14 @@ export interface Reservation {
   quantity: number;
   reservationDate: string;
   pickupDate: string;
-  status: "Pending" | "Approved" | "Declined" | "Completed";
+  status: "Payment Verification" | "Pending" | "Approved" | "Declined" | "Completed" | "Payment Failed / Action Required";
+  paymentStatus?: PaymentStatusType;
   price: number;
+  paymentReferenceNumber?: string;
+  paymentVerifiedAt?: string;
+  paymentVerifiedBy?: string;
+  paymentRejectionReason?: string;
+  isDuplicateReference?: boolean;
 }
 
 export type OrderType = "Cash" | "Reservation" | "Paluwagan";
@@ -71,11 +109,14 @@ export interface PaluwaganScheduleItem {
   dueDate: string;
   amountDue: number;
   amountPaid: number;
-  status: "UPCOMING" | "DUE" | "PAID" | "PARTIALLY PAID" | "OVERDUE" | "MISSED";
+  status: "UPCOMING" | "DUE" | "PAID" | "PARTIALLY PAID" | "OVERDUE" | "MISSED" | "PENDING VERIFICATION" | "REJECTED";
   paymentDate?: string;
   receiptNumber?: string;
   collector?: string;
   remarks?: string;
+  referenceNumber?: string;
+  verificationStatus?: "Pending Verification" | "Paid" | "Rejected";
+  isDuplicateReference?: boolean;
 }
 
 export interface PaluwaganBatch {
@@ -96,8 +137,8 @@ export interface Order {
   quantity: number;
   orderType: OrderType;
   totalAmount: number;
-  paymentStatus: "Paid" | "Pending" | "Partially Paid" | "Unpaid";
-  status: "Pending" | "Approved" | "Preparing" | "Ready for Pickup" | "Out for Delivery" | "Delivered" | "Completed" | "Cancelled" | "Processing" | "Shipped";
+  paymentStatus: PaymentStatusType;
+  status: OrderStatusType;
   driverName?: string;
   estimatedArrival?: string;
   dateCreated: string;
@@ -106,6 +147,13 @@ export interface Order {
   batchId?: string;
   paluwaganSchedule?: PaluwaganScheduleItem[];
   
+  // Payment Verification fields
+  paymentReferenceNumber?: string;
+  paymentVerifiedAt?: string;
+  paymentVerifiedBy?: string;
+  paymentRejectionReason?: string;
+  isDuplicateReference?: boolean;
+
   // Cash fields
   deliveryOrPickup?: "Delivery" | "Pickup";
   paymentMethod?: string;
@@ -176,8 +224,14 @@ export interface PaluwaganLedgerEntry {
   remainingBalanceAfter: number;
   paymentMethod: string;
   collector: string;
-  status: "Paid" | "Partial Payment" | "Overdue" | "Voided";
+  status: "Paid" | "Partial Payment" | "Overdue" | "Voided" | "Pending Verification" | "Rejected";
   remarks?: string;
+  referenceNumber?: string;
+  verificationStatus?: "Pending Verification" | "Paid" | "Rejected";
+  verifiedBy?: string;
+  verifiedAt?: string;
+  rejectionReason?: string;
+  isDuplicateReference?: boolean;
 }
 
 export interface CustomerAccount {
@@ -332,6 +386,17 @@ interface RoleContextProps {
   restoreMember: (id: string) => Promise<boolean>;
   recordMemberPayment: (payment: Omit<MemberPayment, "id" | "receiptNumber" | "paymentDate">) => Promise<boolean>;
   addNotification: (notif: { title: string; message: string; type: "order" | "reservation" | "system" }) => Promise<void>;
+
+  // Online Payment Verification Stores & Actions
+  onlinePaymentChannels: OnlinePaymentChannel[];
+  updateOnlinePaymentChannels: (channels: OnlinePaymentChannel[]) => Promise<boolean>;
+  checkDuplicateReferenceNumber: (refNumber: string, ignoreId?: string) => boolean;
+  verifyOrderPayment: (orderId: string, adminEmail: string) => Promise<boolean>;
+  rejectOrderPayment: (orderId: string, reason: string, adminEmail: string) => Promise<boolean>;
+  resubmitOrderPaymentReference: (orderId: string, newRefNumber: string) => Promise<boolean>;
+  submitPaluwaganInstallmentPayment: (orderId: string, installmentNumber: number, referenceNumber: string) => Promise<boolean>;
+  verifyPaluwaganPayment: (entryId: string, adminEmail: string) => Promise<boolean>;
+  rejectPaluwaganPayment: (entryId: string, reason: string, adminEmail: string) => Promise<boolean>;
 
   // Supabase Auth Methods
   signOut: () => Promise<void>;
@@ -3166,6 +3231,314 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     simulateEmail(cust.email, "Registration Successful", "Welcome to Savorlicious Food Services! Your customer account has been registered successfully.", "system");
     simulateEmail("admin@delmarfarm.com", "New Registration", `Customer ${cust.fullName} (${cust.email}) has created an account.`, "system");
+  // Online Payment Channels Store
+  const defaultChannels: OnlinePaymentChannel[] = [
+    {
+      id: "pay-chan-1",
+      providerName: "GCash Mobile",
+      accountName: "Delmar E. Arsenal",
+      accountNumber: "09464544973",
+      instructions: "1. Send exact order/installment amount to GCash mobile 09464544973 (Delmar E. Arsenal).\n2. Save payment receipt screenshot.\n3. Copy reference number & enter below.",
+      isActive: true,
+    },
+    {
+      id: "pay-chan-2",
+      providerName: "BanKo (Subsidiary of BPI)",
+      accountName: "Delmar E. Arsenal",
+      accountNumber: "1800-1945-2644",
+      instructions: "1. Transfer exact amount via BPI / BanKo online or OTC (Acct: 1800-1945-2644).\n2. Save reference receipt.\n3. Enter reference number below for verification.",
+      isActive: true,
+    },
+  ];
+
+  const [onlinePaymentChannels, setOnlinePaymentChannels] = useState<OnlinePaymentChannel[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("delmar_online_payment_channels");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return defaultChannels;
+  });
+
+  const updateOnlinePaymentChannels = async (channels: OnlinePaymentChannel[]): Promise<boolean> => {
+    setOnlinePaymentChannels(channels);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("delmar_online_payment_channels", JSON.stringify(channels));
+    }
+    logAction("UPDATE_PAYMENT_CHANNELS", "Updated admin online payment channel configurations.");
+    showToast("Payment Settings Saved", "Online payment channel configurations updated successfully.", "success");
+    return true;
+  };
+
+  const checkDuplicateReferenceNumber = (refNumber: string, ignoreId?: string): boolean => {
+    const clean = refNumber.trim().toUpperCase();
+    if (!clean) return false;
+
+    const dupInOrders = orders.some(o => o.id !== ignoreId && o.paymentReferenceNumber && o.paymentReferenceNumber.trim().toUpperCase() === clean);
+    if (dupInOrders) return true;
+
+    const dupInReservations = reservations.some(r => r.id !== ignoreId && r.paymentReferenceNumber && r.paymentReferenceNumber.trim().toUpperCase() === clean);
+    if (dupInReservations) return true;
+
+    const dupInLedger = paluwaganLedger.some(l => l.referenceNumber && l.referenceNumber.trim().toUpperCase() === clean);
+    if (dupInLedger) return true;
+
+    return false;
+  };
+
+  const verifyOrderPayment = async (orderId: string, adminEmail: string): Promise<boolean> => {
+    const now = new Date().toISOString();
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        simulateEmail(o.customerEmail, "Payment Verified & Order Processing", `Your payment for Order #${o.id} has been verified by our team. Your order status is now Processing.`, "order");
+        logAction("VERIFY_ORDER_PAYMENT", `Admin ${adminEmail} verified payment for Order #${o.id} (Ref: ${o.paymentReferenceNumber || "N/A"}).`);
+        return {
+          ...o,
+          paymentStatus: "Paid" as const,
+          status: "Processing" as const,
+          paymentVerifiedAt: now,
+          paymentVerifiedBy: adminEmail,
+          paymentRejectionReason: undefined,
+        };
+      }
+      return o;
+    }));
+
+    setReservations(prev => prev.map(r => {
+      if (r.id === orderId) {
+        return {
+          ...r,
+          paymentStatus: "Paid" as const,
+          status: "Approved" as const,
+          paymentVerifiedAt: now,
+          paymentVerifiedBy: adminEmail,
+          paymentRejectionReason: undefined,
+        };
+      }
+      return r;
+    }));
+
+    showToast("Payment Verified", `Order #${orderId} payment verified and updated to Processing.`, "success");
+    return true;
+  };
+
+  const rejectOrderPayment = async (orderId: string, reason: string, adminEmail: string): Promise<boolean> => {
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        simulateEmail(o.customerEmail, "Payment Verification Action Required", `Your payment reference for Order #${o.id} could not be verified. Reason: ${reason}. Please update your reference number on your dashboard.`, "order");
+        logAction("REJECT_ORDER_PAYMENT", `Admin ${adminEmail} rejected payment for Order #${o.id}. Reason: ${reason}`);
+        return {
+          ...o,
+          paymentStatus: "Rejected" as const,
+          status: "Payment Failed / Action Required" as const,
+          paymentRejectionReason: reason,
+        };
+      }
+      return o;
+    }));
+
+    setReservations(prev => prev.map(r => {
+      if (r.id === orderId) {
+        return {
+          ...r,
+          paymentStatus: "Rejected" as const,
+          status: "Payment Failed / Action Required" as const,
+          paymentRejectionReason: reason,
+        };
+      }
+      return r;
+    }));
+
+    showToast("Payment Rejected", `Order #${orderId} payment rejected. Customer notified.`, "warning");
+    return true;
+  };
+
+  const resubmitOrderPaymentReference = async (orderId: string, newRefNumber: string): Promise<boolean> => {
+    const cleanRef = newRefNumber.trim();
+    if (!cleanRef) return false;
+    const isDuplicate = checkDuplicateReferenceNumber(cleanRef, orderId);
+
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        simulateEmail("admin@delmarfarm.com", "Resubmitted Payment Reference", `Customer ${o.customerName} resubmitted payment reference (${cleanRef}) for Order #${o.id}.`, "order");
+        return {
+          ...o,
+          paymentReferenceNumber: cleanRef,
+          paymentStatus: "Pending Verification" as const,
+          status: "Payment Verification" as const,
+          isDuplicateReference: isDuplicate,
+          paymentRejectionReason: undefined,
+        };
+      }
+      return o;
+    }));
+
+    setReservations(prev => prev.map(r => {
+      if (r.id === orderId) {
+        return {
+          ...r,
+          paymentReferenceNumber: cleanRef,
+          paymentStatus: "Pending Verification" as const,
+          status: "Payment Verification" as const,
+          isDuplicateReference: isDuplicate,
+          paymentRejectionReason: undefined,
+        };
+      }
+      return r;
+    }));
+
+    showToast("Reference Resubmitted", `Payment reference for Order #${orderId} resubmitted for verification.`, "info");
+    return true;
+  };
+
+  const submitPaluwaganInstallmentPayment = async (orderId: string, installmentNumber: number, referenceNumber: string): Promise<boolean> => {
+    const cleanRef = referenceNumber.trim();
+    if (!cleanRef) return false;
+    const isDuplicate = checkDuplicateReferenceNumber(cleanRef);
+
+    let targetOrder = orders.find(o => o.id === orderId);
+    let targetInstallment = targetOrder?.paluwaganSchedule?.find(i => i.installmentNumber === installmentNumber);
+
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId && o.paluwaganSchedule) {
+        const updatedSched = o.paluwaganSchedule.map(item => {
+          if (item.installmentNumber === installmentNumber) {
+            return {
+              ...item,
+              status: "PENDING VERIFICATION" as const,
+              referenceNumber: cleanRef,
+              verificationStatus: "Pending Verification" as const,
+              isDuplicateReference: isDuplicate,
+            };
+          }
+          return item;
+        });
+        return { ...o, paluwaganSchedule: updatedSched };
+      }
+      return o;
+    }));
+
+    const newLedgerEntry: PaluwaganLedgerEntry = {
+      id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      receiptNumber: `REF-${cleanRef}`,
+      paymentDate: new Date().toISOString().split("T")[0],
+      memberId: targetOrder?.batchId || "DPF-MEMBER",
+      memberName: targetOrder?.customerName || userName,
+      customerEmail: targetOrder?.customerEmail || userEmail,
+      batchId: targetOrder?.batchId || "pb1",
+      batchName: "Cohort Paluwagan",
+      orderId: orderId,
+      installmentNumber,
+      amountDue: targetInstallment?.amountDue || 2500,
+      amountPaid: targetInstallment?.amountDue || 2500,
+      remainingBalanceAfter: Math.max(0, (targetOrder?.remainingBalance || 0) - (targetInstallment?.amountDue || 2500)),
+      paymentMethod: "Online Payment",
+      collector: "Customer Self-Service",
+      status: "Pending Verification",
+      referenceNumber: cleanRef,
+      verificationStatus: "Pending Verification",
+      isDuplicateReference: isDuplicate,
+      remarks: `Customer online remittance submission for installment #${installmentNumber}`
+    };
+
+    setPaluwaganLedger(prev => [newLedgerEntry, ...prev]);
+    simulateEmail("admin@delmarfarm.com", "Paluwagan Remittance Submitted", `Customer ${userName} submitted online remittance for installment #${installmentNumber} (Ref: ${cleanRef}).`, "order");
+    showToast("Remittance Submitted", `Paluwagan installment #${installmentNumber} payment submitted for verification.`, "info");
+    return true;
+  };
+
+  const verifyPaluwaganPayment = async (entryId: string, adminEmail: string): Promise<boolean> => {
+    const entry = paluwaganLedger.find(e => e.id === entryId);
+    if (!entry) return false;
+    const now = new Date().toISOString();
+
+    setPaluwaganLedger(prev => prev.map(e => {
+      if (e.id === entryId) {
+        return {
+          ...e,
+          status: "Paid",
+          verificationStatus: "Paid",
+          verifiedBy: adminEmail,
+          verifiedAt: now,
+        };
+      }
+      return e;
+    }));
+
+    setOrders(prev => prev.map(o => {
+      if (o.id === entry.orderId && o.paluwaganSchedule) {
+        const updatedSched = o.paluwaganSchedule.map(item => {
+          if (item.installmentNumber === entry.installmentNumber) {
+            return {
+              ...item,
+              status: "PAID" as const,
+              amountPaid: entry.amountPaid,
+              paymentDate: entry.paymentDate,
+              receiptNumber: entry.receiptNumber,
+              verificationStatus: "Paid" as const,
+            };
+          }
+          return item;
+        });
+
+        const newRemaining = Math.max(0, (o.remainingBalance || 0) - entry.amountPaid);
+        const isFullyPaid = newRemaining === 0;
+
+        return {
+          ...o,
+          remainingBalance: newRemaining,
+          paymentStatus: isFullyPaid ? ("Paid" as const) : ("Partially Paid" as const),
+          paluwaganSchedule: updatedSched,
+        };
+      }
+      return o;
+    }));
+
+    simulateEmail(entry.customerEmail, "Paluwagan Installment Payment Verified", `Your Paluwagan installment #${entry.installmentNumber} payment of ₱${entry.amountPaid.toLocaleString()} has been verified!`, "order");
+    logAction("VERIFY_PALUWAGAN_PAYMENT", `Admin ${adminEmail} verified Paluwagan payment entry ${entryId} (Ref: ${entry.referenceNumber}).`);
+    showToast("Installment Verified", `Paluwagan payment verified and credited.`, "success");
+    return true;
+  };
+
+  const rejectPaluwaganPayment = async (entryId: string, reason: string, adminEmail: string): Promise<boolean> => {
+    const entry = paluwaganLedger.find(e => e.id === entryId);
+    if (!entry) return false;
+
+    setPaluwaganLedger(prev => prev.map(e => {
+      if (e.id === entryId) {
+        return {
+          ...e,
+          status: "Rejected",
+          verificationStatus: "Rejected",
+          rejectionReason: reason,
+          verifiedBy: adminEmail,
+        };
+      }
+      return e;
+    }));
+
+    setOrders(prev => prev.map(o => {
+      if (o.id === entry.orderId && o.paluwaganSchedule) {
+        const updatedSched = o.paluwaganSchedule.map(item => {
+          if (item.installmentNumber === entry.installmentNumber) {
+            return {
+              ...item,
+              status: "REJECTED" as const,
+              verificationStatus: "Rejected" as const,
+              remarks: `Rejected: ${reason}`,
+            };
+          }
+          return item;
+        });
+        return { ...o, paluwaganSchedule: updatedSched };
+      }
+      return o;
+    }));
+
+    simulateEmail(entry.customerEmail, "Paluwagan Remittance Action Required", `Your Paluwagan installment #${entry.installmentNumber} reference code could not be verified. Reason: ${reason}. Please update your reference number in your portal.`, "order");
+    logAction("REJECT_PALUWAGAN_PAYMENT", `Admin ${adminEmail} rejected Paluwagan payment entry ${entryId}. Reason: ${reason}`);
+    showToast("Payment Rejected", `Paluwagan payment rejected. Customer notified.`, "warning");
     return true;
   };
 
@@ -3236,7 +3609,16 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         recordMemberPayment,
         addNotification,
         toast,
-        showToast
+        showToast,
+        onlinePaymentChannels,
+        updateOnlinePaymentChannels,
+        checkDuplicateReferenceNumber,
+        verifyOrderPayment,
+        rejectOrderPayment,
+        resubmitOrderPaymentReference,
+        submitPaluwaganInstallmentPayment,
+        verifyPaluwaganPayment,
+        rejectPaluwaganPayment
       }}
     >
       {children}

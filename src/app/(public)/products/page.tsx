@@ -6,19 +6,24 @@ import { useRole } from "@/context/RoleContext";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
-import { Search, Filter, ShoppingBag, CheckCircle2, ShieldAlert } from "lucide-react";
+import { Search, Filter, ShoppingBag, CheckCircle2, ShieldAlert, Clock, Wallet } from "lucide-react";
 
 export default function ProductsPage() {
-  const { role, addReservation } = useRole();
+  const { role, addOrder, onlinePaymentChannels, checkDuplicateReferenceNumber, userName, userEmail, userAddress } = useRole();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("All");
   
-  // Reservation Modal states
+  // Reservation / Checkout Modal states
   const [isReserveModalOpen, setIsReserveModalOpen] = useState(false);
   const [reserveProduct, setReserveProduct] = useState<{ title: string; category: string; price: number } | null>(null);
   const [reserveQty, setReserveQty] = useState(1);
   const [reserveDate, setReserveDate] = useState("");
+  const [paymentChannelId, setPaymentChannelId] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [refError, setRefError] = useState("");
+  const [isDuplicateRef, setIsDuplicateRef] = useState(false);
+  const [createdOrderNumber, setCreatedOrderNumber] = useState("");
   const [reserveSuccess, setReserveSuccess] = useState(false);
 
   const categories = ["All", "Piglets", "Fattening Pigs", "Fresh Pork Meat"];
@@ -98,58 +103,18 @@ export default function ProductsPage() {
       id: "p8",
       title: "Pork Shoulder (Kasim)",
       category: "Fresh Pork Meat",
-      description: "Lean, tender pork shoulder cuts, ideal for standard Filipino stews (adobo, sinigang, menudo). Freshly prepped.",
-      price: 290,
+      description: "Versatile, flavorful pork shoulder cuts suitable for pork menudo, adobo, or ground pork dishes.",
+      price: 280,
       unit: "per kg",
       stockStatus: "Available",
-      specifications: "Vacuum Sealed | Hygienically butchered",
+      specifications: "Vacuum Sealed | Freshly Chilled",
     },
     {
       id: "p9",
-      title: "Pork Leg / Ham (Pata)",
+      title: "Ground Pork (Lean)",
       category: "Fresh Pork Meat",
-      description: "Meaty pork leg bone cuts, perfect for crispy pata or pata hamonado preparations.",
-      price: 290,
-      unit: "per kg",
-      stockStatus: "Available",
-      specifications: "Vacuum Sealed | Freshly Chilled",
-    },
-    {
-      id: "p10",
-      title: "Pork Liver (Atay)",
-      category: "Fresh Pork Meat",
-      description: "Nutrient-dense fresh pork liver, excellent for menudo, sisig, or local liver sauces.",
-      price: 250,
-      unit: "per kg",
-      stockStatus: "Available",
-      specifications: "Vacuum Sealed | Freshly Chilled",
-    },
-    {
-      id: "p11",
-      title: "Pig's Feet (Tiil / Trotters)",
-      category: "Fresh Pork Meat",
-      description: "Cleanly split trotters, high in collagen. Ideal for paksiw na pata or slow-simmered soups.",
-      price: 250,
-      unit: "per kg",
-      stockStatus: "Available",
-      specifications: "Vacuum Sealed | Freshly Chilled",
-    },
-    {
-      id: "p12",
-      title: "Pork Intestines (Tinae)",
-      category: "Fresh Pork Meat",
-      description: "Thoroughly cleaned pork intestines, perfect for chicharon bulaklak or local stews.",
-      price: 150,
-      unit: "per kg",
-      stockStatus: "Available",
-      specifications: "Vacuum Sealed | Freshly Chilled",
-    },
-    {
-      id: "p13",
-      title: "Pork Head (Ulo)",
-      category: "Fresh Pork Meat",
-      description: "Freshly prepared pork head cuts, ideal for authentic sisig or dinuguan recipes.",
-      price: 170,
+      description: "Hygienically ground lean pork meat with low fat ratio. Ideal for lumpia, meatballs, and patties.",
+      price: 260,
       unit: "per kg",
       stockStatus: "Available",
       specifications: "Vacuum Sealed | Freshly Chilled",
@@ -157,13 +122,10 @@ export default function ProductsPage() {
   ];
 
   const filteredProducts = productsList.filter((p) => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = p.title.toLowerCase().includes(searchLower) || 
-                          p.description.toLowerCase().includes(searchLower) ||
-                          p.category.toLowerCase().includes(searchLower) ||
-                          (p.specifications && p.specifications.toLowerCase().includes(searchLower));
     const matchesCategory = activeCategory === "All" || p.category === activeCategory;
-    return matchesSearch && matchesCategory;
+    const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          p.description.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
   });
 
   const handleOpenReserve = (product: typeof productsList[0]) => {
@@ -176,32 +138,52 @@ export default function ProductsPage() {
       category: product.category,
       price: product.price,
     });
+    setReferenceNumber("");
+    setRefError("");
+    setIsDuplicateRef(false);
+    if (onlinePaymentChannels.length > 0) {
+      setPaymentChannelId(onlinePaymentChannels[0].id);
+    }
     setIsReserveModalOpen(true);
   };
 
-  const handleReserveSubmit = (e: React.FormEvent) => {
+  const handleReserveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reserveProduct) return;
 
-    addReservation({
-      category: reserveProduct.category as any,
+    const cleanRef = referenceNumber.trim();
+    if (!cleanRef) {
+      setRefError("Payment Reference Number is required for online payment.");
+      return;
+    }
+    setRefError("");
+
+    const isDup = checkDuplicateReferenceNumber(cleanRef);
+    setIsDuplicateRef(isDup);
+
+    const generatedOrdNo = `ORD-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    setCreatedOrderNumber(generatedOrdNo);
+
+    const selectedChannel = onlinePaymentChannels.find(c => c.id === paymentChannelId) || onlinePaymentChannels[0];
+
+    await addOrder({
+      product: reserveProduct.title,
       quantity: reserveQty,
+      orderType: "Reservation",
+      totalAmount: reserveProduct.price * reserveQty,
+      reservationDate: new Date().toISOString().split("T")[0],
       pickupDate: reserveDate || new Date(Date.now() + 86400000 * 5).toISOString().split("T")[0],
-      price: reserveProduct.price * reserveQty,
+      deliveryOrPickup: "Pickup",
+      paymentMethod: selectedChannel?.providerName || "Online Payment",
+      paymentReferenceNumber: cleanRef,
+      deliveryAddress: userAddress || "",
     });
 
     setReserveSuccess(true);
-    setTimeout(() => {
-      setReserveSuccess(false);
-      setIsReserveModalOpen(false);
-      setReserveQty(1);
-      setReserveDate("");
-      setReserveProduct(null);
-    }, 2500);
   };
 
   return (
-    <div className="pt-6 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+    <div className="pt-6 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 font-sans">
       {/* Title */}
       <div className="space-y-3 text-center max-w-2xl mx-auto">
         <h1 className="text-3xl font-extrabold font-heading text-slate-800 tracking-tight">Our Products Catalog</h1>
@@ -211,7 +193,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
+      <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-center">
         {/* Search */}
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -240,7 +222,7 @@ export default function ProductsPage() {
               onClick={() => setActiveCategory(cat)}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeCategory === cat
-                  ? "bg-primary-600 text-white shadow-sm"
+                  ? "bg-primary-600 text-white shadow-xs"
                   : "bg-slate-50 text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -249,17 +231,6 @@ export default function ProductsPage() {
           ))}
         </div>
       </div>
-
-      {/* Free Delivery Promo Banner */}
-      {(activeCategory === "All" || activeCategory === "Fresh Pork Meat") && (
-        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between gap-4 text-xs font-bold text-emerald-800">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span>🚚 FREE DELIVERY on all fresh pork meat orders within **Guipos, Dumalinao, and Pagadian**!</span>
-          </div>
-          <span className="text-[10px] uppercase font-extrabold tracking-wider bg-emerald-100 text-emerald-850 px-2 py-0.5 rounded-md">Promo</span>
-        </div>
-      )}
 
       {/* Products Grid */}
       {filteredProducts.length === 0 ? (
@@ -311,56 +282,160 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Reservation Modal */}
-      <Modal isOpen={isReserveModalOpen} onClose={() => setIsReserveModalOpen(false)} title={`Reserve: ${reserveProduct?.title}`}>
+      {/* Reservation / Checkout Modal */}
+      <Modal isOpen={isReserveModalOpen} onClose={() => { setIsReserveModalOpen(false); setReserveSuccess(false); }} title={reserveSuccess ? "Order Submitted for Verification" : `Checkout: ${reserveProduct?.title}`}>
         {reserveSuccess ? (
-          <div className="text-center py-6 space-y-3">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-6 h-6 animate-bounce" />
+          <div className="text-center py-6 space-y-4 font-sans">
+            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              <Clock className="w-6 h-6 animate-pulse" />
             </div>
-            <h4 className="font-heading text-base font-bold text-slate-800">Reservation Successful!</h4>
-            <p className="text-xs text-slate-500 font-medium">Your request for {reserveQty}x {reserveProduct?.title} has been recorded in the context. Toggle to the portals to track progress!</p>
+            <div className="space-y-1">
+              <span className="px-2.5 py-1 text-[10px] font-extrabold bg-blue-100 text-blue-800 rounded-full uppercase tracking-wider">
+                PAYMENT VERIFICATION PENDING
+              </span>
+              <h4 className="font-heading text-base font-bold text-slate-800 pt-2">Your order has been submitted and is waiting for payment verification.</h4>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-left space-y-2 max-w-sm mx-auto font-medium">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Order Number:</span>
+                <span className="font-bold text-slate-800">{createdOrderNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Payment Status:</span>
+                <span className="font-bold text-blue-600">Pending Verification</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Reference Number:</span>
+                <span className="font-bold text-slate-800">{referenceNumber}</span>
+              </div>
+              {isDuplicateRef && (
+                <div className="p-2 bg-amber-50 border border-amber-200 rounded-xl text-[10px] text-amber-800 font-bold flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Flagged as DUPLICATE Reference Number (Under Admin Review)</span>
+                </div>
+              )}
+            </div>
+
+            <Button onClick={() => { setIsReserveModalOpen(false); setReserveSuccess(false); router.push("/customer/orders"); }} className="w-full">
+              Track Status in My Orders
+            </Button>
           </div>
         ) : (
-          <form onSubmit={handleReserveSubmit} className="space-y-4 font-sans">
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs flex justify-between font-bold text-slate-700">
-              <span>Unit Price: ₱{reserveProduct?.price.toLocaleString()}</span>
-              <span>Total Price: ₱{((reserveProduct?.price || 0) * reserveQty).toLocaleString()}</span>
+          <form onSubmit={handleReserveSubmit} className="space-y-4 font-sans text-xs">
+            {/* ORDER SUMMARY */}
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+              <h4 className="font-heading text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <ShoppingBag className="w-3.5 h-3.5 text-primary-600" /> Order Summary
+              </h4>
+              <div className="flex justify-between font-semibold text-slate-800 text-xs">
+                <span>{reserveProduct?.title} (x{reserveQty})</span>
+                <span>₱{((reserveProduct?.price || 0) * reserveQty).toLocaleString()}</span>
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium">
+                Customer: <strong className="text-slate-700">{userName}</strong> ({userEmail})
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-700 uppercase">Quantity</label>
-              <input
-                type="number"
-                min={1}
-                max={50}
-                required
-                value={reserveQty}
-                onChange={(e) => setReserveQty(parseInt(e.target.value) || 1)}
-                className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium"
-              />
+            {/* QUANTITY & PICKUP DATE */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-700 uppercase">Quantity</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  required
+                  value={reserveQty}
+                  onChange={(e) => setReserveQty(parseInt(e.target.value) || 1)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-700 uppercase">Pickup / Delivery Date</label>
+                <input
+                  type="date"
+                  required
+                  value={reserveDate}
+                  onChange={(e) => setReserveDate(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium"
+                />
+              </div>
             </div>
 
+            {/* ONLINE PAYMENT CHANNELS & INSTRUCTIONS */}
+            <div className="space-y-2 pt-1">
+              <label className="text-[10px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                <Wallet className="w-3.5 h-3.5 text-primary-600" /> Select Payment Channel
+              </label>
+
+              <select
+                value={paymentChannelId}
+                onChange={(e) => setPaymentChannelId(e.target.value)}
+                className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl font-semibold text-slate-800 bg-white"
+              >
+                {onlinePaymentChannels.filter(c => c.isActive).map(channel => (
+                  <option key={channel.id} value={channel.id}>
+                    {channel.providerName} — {channel.accountNumber} ({channel.accountName})
+                  </option>
+                ))}
+              </select>
+
+              {/* Display Configured Channel Instructions */}
+              {(() => {
+                const chan = onlinePaymentChannels.find(c => c.id === paymentChannelId) || onlinePaymentChannels[0];
+                return (
+                  <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl space-y-1 text-[11px] text-blue-900 font-medium">
+                    <div className="font-bold flex items-center justify-between">
+                      <span>Payment Account: {chan?.accountNumber} ({chan?.accountName})</span>
+                      <span className="text-[9px] bg-blue-100 text-blue-800 font-extrabold px-1.5 py-0.5 rounded-sm uppercase">{chan?.providerName}</span>
+                    </div>
+                    <div className="text-[10px] text-blue-700 whitespace-pre-line leading-relaxed font-normal">
+                      {chan?.instructions}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* REFERENCE NUMBER INPUT */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-700 uppercase">Pickup Date</label>
+              <label className="text-[10px] font-bold text-slate-700 uppercase flex items-center justify-between">
+                <span>Payment Reference Number <span className="text-red-500">*</span></span>
+                <span className="text-[9px] font-normal text-slate-400">Required for verification</span>
+              </label>
               <input
-                type="date"
+                type="text"
                 required
-                value={reserveDate}
-                onChange={(e) => setReserveDate(e.target.value)}
-                className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl font-medium"
+                placeholder="e.g. ABC123456789 or GCSH-987654"
+                value={referenceNumber}
+                onChange={(e) => {
+                  setReferenceNumber(e.target.value);
+                  setRefError("");
+                  setIsDuplicateRef(checkDuplicateReferenceNumber(e.target.value));
+                }}
+                className="w-full text-xs px-3.5 py-2.5 border border-slate-200 rounded-xl font-mono uppercase tracking-wider focus:outline-hidden focus:ring-2 focus:ring-primary-500/20"
               />
+              {refError && (
+                <p className="text-[10px] font-bold text-red-500">{refError}</p>
+              )}
+              {isDuplicateRef && (
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[10px] text-amber-800 font-bold flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>This payment reference number has already been submitted. It will be flagged as DUPLICATE for Admin review.</span>
+                </div>
+              )}
             </div>
 
             <div className="pt-2">
               <Button type="submit" className="w-full">
-                Confirm Simulated Reservation
+                Submit Order for Verification (₱{((reserveProduct?.price || 0) * reserveQty).toLocaleString()})
               </Button>
             </div>
           </form>
         )}
       </Modal>
-
     </div>
   );
 }
