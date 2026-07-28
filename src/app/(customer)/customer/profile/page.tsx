@@ -126,12 +126,12 @@ export default function CustomerProfilePage() {
               
               <div className="p-3 bg-white rounded-xl border border-slate-100 space-y-1">
                 <div className="font-bold text-slate-800">GCash Mobile</div>
-                <div className="text-[10px] text-slate-400">0912 345 6789 - ELENA D.</div>
+                <div className="text-[10px] text-slate-400">09464544973 (Delmar E. Arsenal)</div>
               </div>
 
               <div className="p-3 bg-white rounded-xl border border-slate-100 space-y-1">
-                <div className="font-bold text-slate-800">BDO Savings</div>
-                <div className="text-[10px] text-slate-400">Acct: 0012-3456-7890 (Delmar Farm)</div>
+                <div className="font-bold text-slate-800">BanKo (Subsidiary of BPI)</div>
+                <div className="text-[10px] text-slate-400">Acct: 1800-1945-2644 (Delmar E. Arsenal)</div>
               </div>
             </div>
           </Card>
