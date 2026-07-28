@@ -62,7 +62,7 @@ export default function ProductsPage() {
       price: 200,
       unit: "per kilo",
       stockStatus: "Available",
-      specifications: "Age: 12 weeks | Bio-Feed Diet",
+      specifications: "Age: 3-4 months | Bio-Feed Diet",
     },
     {
       id: "p5",
