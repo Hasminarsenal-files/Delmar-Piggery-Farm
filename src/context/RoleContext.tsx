@@ -3231,6 +3231,9 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     simulateEmail(cust.email, "Registration Successful", "Welcome to Savorlicious Food Services! Your customer account has been registered successfully.", "system");
     simulateEmail("admin@delmarfarm.com", "New Registration", `Customer ${cust.fullName} (${cust.email}) has created an account.`, "system");
+    return true;
+  };
+
   // Online Payment Channels Store
   const defaultChannels: OnlinePaymentChannel[] = [
     {
