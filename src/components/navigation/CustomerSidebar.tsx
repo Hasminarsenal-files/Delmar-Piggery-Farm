@@ -7,7 +7,6 @@ import { useRole } from "@/context/RoleContext";
 import {
   LayoutDashboard,
   ShoppingBag,
-  CalendarCheck,
   Bell,
   User,
   LogOut,
@@ -28,7 +27,6 @@ export const CustomerSidebar: React.FC = () => {
   const links = [
     { name: "Dashboard", href: "/customer/dashboard", icon: LayoutDashboard },
     { name: "My Orders", href: "/customer/orders", icon: ShoppingBag },
-    { name: "My Reservations", href: "/customer/reservations", icon: CalendarCheck },
     { name: "My Paluwagan", href: "/customer/paluwagan", icon: PiggyBank },
     { name: "Paluwagan Membership", href: "/customer/paluwagan-membership", icon: ShieldCheck },
     { name: "Payment Methods", href: "/customer/payment-methods", icon: CreditCard },
@@ -46,7 +44,7 @@ export const CustomerSidebar: React.FC = () => {
   return (
     <>
       {/* Mobile Top Bar */}
-      <div className="md:hidden bg-primary-800 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+      <div className="md:hidden bg-primary-800 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 font-sans">
         <Link href="/" className="flex items-center bg-white px-2 py-1 rounded-lg">
           <img src="/logo.jpg" alt="Delmar Piggery Farm Logo" className="h-8 w-auto object-contain" />
         </Link>
@@ -81,10 +79,10 @@ export const CustomerSidebar: React.FC = () => {
         </div>
 
         {/* User Card */}
-        <div className="p-4 border-b border-slate-50">
+        <div className="p-4 border-b border-slate-50 font-sans">
           <div className="bg-primary-50/50 rounded-2xl p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold font-heading text-sm">
-              {userName.split(" ").map(n => n[0]).join("")}
+              {userName ? userName.split(" ").map(n => n[0]).join("") : "U"}
             </div>
             <div className="overflow-hidden">
               <h4 className="text-xs font-bold text-slate-800 truncate">{userName}</h4>
@@ -94,28 +92,27 @@ export const CustomerSidebar: React.FC = () => {
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto font-sans">
           {links.map((link) => {
             const Icon = link.icon;
+            const active = isActive(link.href);
             return (
               <Link
                 key={link.name}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
                 className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-                  isActive(link.href)
-                    ? "bg-primary-600 text-white shadow-md shadow-primary-600/10"
+                  active
+                    ? "bg-[#1B4332] text-white shadow-xs"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
-                <span className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 ${isActive(link.href) ? "text-white" : "text-slate-400"}`} />
-                  {link.name}
-                </span>
+                <div className="flex items-center gap-3">
+                  <Icon className={`w-4 h-4 ${active ? "text-white" : "text-slate-400"}`} />
+                  <span>{link.name}</span>
+                </div>
                 {link.badge !== undefined && (
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                    isActive(link.href) ? "bg-white text-primary-600" : "bg-red-50 text-red-600"
-                  }`}>
+                  <span className="bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                     {link.badge}
                   </span>
                 )}
@@ -124,18 +121,13 @@ export const CustomerSidebar: React.FC = () => {
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="p-4 border-t border-[#e6e8e6]">
+        {/* Footer / Sign Out */}
+        <div className="p-4 border-t border-[#e6e8e6] font-sans">
           <button
-            onClick={() => {
-              setRole("guest");
-              setIsOpen(false);
-            }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 cursor-pointer group border border-transparent hover:border-red-100"
+            onClick={() => setRole("guest")}
+            className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
           >
-            <div className="p-1.5 bg-red-50 group-hover:bg-red-100 rounded-lg transition-colors">
-              <LogOut className="w-3.5 h-3.5 text-red-500" />
-            </div>
+            <LogOut className="w-4 h-4 text-slate-400 group-hover:text-red-600" />
             <span>Sign Out</span>
           </button>
         </div>
