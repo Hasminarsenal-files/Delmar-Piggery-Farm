@@ -15,6 +15,7 @@ import {
   X,
   PiggyBank,
   ShieldCheck,
+  CreditCard,
 } from "lucide-react";
 
 export const CustomerSidebar: React.FC = () => {
@@ -30,6 +31,7 @@ export const CustomerSidebar: React.FC = () => {
     { name: "My Reservations", href: "/customer/reservations", icon: CalendarCheck },
     { name: "My Paluwagan", href: "/customer/paluwagan", icon: PiggyBank },
     { name: "Paluwagan Membership", href: "/customer/paluwagan-membership", icon: ShieldCheck },
+    { name: "Payment Methods", href: "/customer/payment-methods", icon: CreditCard },
     {
       name: "Notifications",
       href: "/customer/notifications",
