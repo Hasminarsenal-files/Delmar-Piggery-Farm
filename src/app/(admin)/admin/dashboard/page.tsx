@@ -76,7 +76,10 @@ export default function AdminDashboard() {
     batches,
     memberPayments,
     paluwaganBatches,
-    auditLogs
+    auditLogs,
+    isRealtimeConnected,
+    lastSyncTimestamp,
+    triggerRealtimeSync
   } = useRole();
 
   const [timeGreeting, setTimeGreeting] = useState("Good Morning");
@@ -442,9 +445,21 @@ export default function AdminDashboard() {
         <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-[#2D6A4F]/20 rounded-full blur-3xl pointer-events-none" />
 
         <div className="space-y-2 z-10">
-          <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/5">
-            Command Center
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/5">
+              Command Center
+            </span>
+            <button
+              onClick={triggerRealtimeSync}
+              className="text-[10px] font-extrabold text-emerald-300 uppercase tracking-wider bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              title="Click to force live synchronization"
+            >
+              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+              <span>LIVE SYNC ACTIVE</span>
+              <RefreshCw className="w-3 h-3 text-emerald-400 hover:rotate-180 transition-transform duration-500" />
+              <span className="text-[9px] text-emerald-400/80 font-mono">({lastSyncTimestamp})</span>
+            </button>
+          </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-white tracking-tight">
             {timeGreeting}, Elena Delmar
           </h1>

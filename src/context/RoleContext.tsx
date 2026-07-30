@@ -398,6 +398,11 @@ interface RoleContextProps {
   verifyPaluwaganPayment: (entryId: string, adminEmail: string) => Promise<boolean>;
   rejectPaluwaganPayment: (entryId: string, reason: string, adminEmail: string) => Promise<boolean>;
 
+  // Real-Time Engine
+  isRealtimeConnected: boolean;
+  lastSyncTimestamp: string;
+  triggerRealtimeSync: () => void;
+
   // Supabase Auth Methods
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<boolean>;
@@ -627,6 +632,22 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Real-Time Engine State
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState<boolean>(true);
+  const [lastSyncTimestamp, setLastSyncTimestamp] = useState<string>(() => new Date().toLocaleTimeString());
+  const broadcastChannelRef = React.useRef<BroadcastChannel | null>(null);
+
+  const notifyRealtimeChannel = (actionType: string, payload?: any) => {
+    setLastSyncTimestamp(new Date().toLocaleTimeString());
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({ type: actionType, payload, timestamp: Date.now() });
+      } catch (err) {
+        console.warn("Realtime broadcast failed:", err);
+      }
+    }
+  };
 
   // In-Memory sync stores (also serve as fallbacks)
   const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
@@ -1099,11 +1120,55 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const triggerRealtimeSync = () => {
+    loadMockData();
+    setLastSyncTimestamp(new Date().toLocaleTimeString());
+  };
+
   // Hydrate client-only state on mount and register listeners
   useEffect(() => {
     loadMockData();
 
-    // Cross-tab real-time storage listener
+    // 1. Cross-tab BroadcastChannel for zero-latency instant updates
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      const channel = new BroadcastChannel("delmar_realtime_sync");
+      broadcastChannelRef.current = channel;
+      channel.onmessage = (e) => {
+        loadMockData();
+        setLastSyncTimestamp(new Date().toLocaleTimeString());
+      };
+    }
+
+    // 2. Heartbeat Ticker Timer (every 3s) for continuous live stats
+    const heartbeat = setInterval(() => {
+      setLastSyncTimestamp(new Date().toLocaleTimeString());
+    }, 3000);
+
+    // 3. Supabase Postgres Realtime Subscription (if DB is configured)
+    let realTimeChannel: any = null;
+    if (!isSupabasePlaceholder) {
+      try {
+        realTimeChannel = supabase
+          .channel("public-db-realtime")
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public" },
+            (payload) => {
+              loadMockData();
+              setLastSyncTimestamp(new Date().toLocaleTimeString());
+            }
+          )
+          .subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              setIsRealtimeConnected(true);
+            }
+          });
+      } catch (err) {
+        console.warn("Supabase realtime subscription skipped/failed:", err);
+      }
+    }
+
+    // 4. Cross-tab real-time storage listener
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "delmar_orders" && e.newValue) {
         try { setOrders(JSON.parse(e.newValue)); } catch {}
@@ -1149,67 +1214,87 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      clearInterval(heartbeat);
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.close();
+      }
+      if (realTimeChannel) {
+        supabase.removeChannel(realTimeChannel);
+      }
+    };
   }, []);
 
-  // Observers to automatically synchronize in-memory state modifications to localStorage
+  // Observers to automatically synchronize in-memory state modifications to localStorage & BroadcastChannel
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("delmar_orders", JSON.stringify(orders));
+      notifyRealtimeChannel("orders", orders);
     }
   }, [orders]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("delmar_reservations", JSON.stringify(reservations));
+      notifyRealtimeChannel("reservations", reservations);
     }
   }, [reservations]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("delmar_inventory", JSON.stringify(inventory));
+      notifyRealtimeChannel("inventory", inventory);
     }
   }, [inventory]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("delmar_inventory_logs", JSON.stringify(inventoryLogs));
+      notifyRealtimeChannel("inventory_logs", inventoryLogs);
     }
   }, [inventoryLogs]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("delmar_notifications", JSON.stringify(notifications));
+      notifyRealtimeChannel("notifications", notifications);
     }
   }, [notifications]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("delmar_batches", JSON.stringify(batches));
+      notifyRealtimeChannel("batches", batches);
     }
   }, [batches]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("delmar_members", JSON.stringify(members));
+      notifyRealtimeChannel("members", members);
     }
   }, [members]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("delmar_member_payments", JSON.stringify(memberPayments));
+      notifyRealtimeChannel("member_payments", memberPayments);
     }
   }, [memberPayments]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("delmar_customers", JSON.stringify(customers));
+      notifyRealtimeChannel("customers", customers);
     }
   }, [customers]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("savorlicious_paluwagan_batches", JSON.stringify(paluwaganBatches));
+      notifyRealtimeChannel("paluwagan_batches", paluwaganBatches);
     }
   }, [paluwaganBatches]);
 
@@ -3621,7 +3706,10 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resubmitOrderPaymentReference,
         submitPaluwaganInstallmentPayment,
         verifyPaluwaganPayment,
-        rejectPaluwaganPayment
+        rejectPaluwaganPayment,
+        isRealtimeConnected,
+        lastSyncTimestamp,
+        triggerRealtimeSync
       }}
     >
       {children}

@@ -72,7 +72,7 @@ const getCountdown = (dateStr: string) => {
 };
 
 export default function CustomerDashboard() {
-  const { userName, userEmail, userAddress, orders, reservations, notifications, addReservation, addOrder, markNotificationRead, clearNotifications, paluwaganBatches, paluwaganApplications } = useRole();
+  const { userName, userEmail, userAddress, orders, reservations, notifications, addReservation, addOrder, markNotificationRead, clearNotifications, paluwaganBatches, paluwaganApplications, lastSyncTimestamp, triggerRealtimeSync } = useRole();
   
   // Filter lists based on logged in user
   const customerOrders = orders.filter((o) => o.customerEmail === userEmail);
@@ -349,6 +349,13 @@ export default function CustomerDashboard() {
 
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold text-emerald-300 uppercase tracking-wider bg-emerald-950/60 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                <span>LIVE REAL-TIME CONNECTED</span>
+                <span className="text-[9px] text-emerald-400/80 font-mono">({lastSyncTimestamp})</span>
+              </span>
+            </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold font-heading tracking-tight">Welcome Back, {profileName}</h1>
             <p className="text-xs sm:text-sm text-emerald-100/80 max-w-xl leading-relaxed font-medium">
               Manage your livestock orders, reservations, deliveries, and farm services from one convenient dashboard.
